@@ -1,5 +1,5 @@
 import './style.css'
-import { createBoard, lanes } from './board.js'
+import { createBoard, lanes, shoppingCategory } from './board.js'
 import { createTools, defaultOptions } from './tools.js'
 import { createWhiteboard } from './whiteboard.js'
 import { frameworks } from './templates.js'
@@ -13,7 +13,7 @@ const demoCards = [
   { title: 'Plan this week', lane: 'today', notes: 'Pick three things to finish.' },
   { title: 'Map out a weekend road trip', lane: 'highway' },
   { title: 'Photograph a new neighbourhood', lane: 'parking' },
-  { title: 'Coffee beans', lane: 'shopping' },
+  { title: 'Coffee beans', lane: 'shopping', shoppingCategory: 'groceries' },
   { title: 'Confirm a dinner reservation', lane: 'express' },
   { title: 'Send the signed forms before lunch', lane: 'express' },
   { title: 'Schedule a check-up', lane: 'schedule' },
@@ -45,6 +45,7 @@ function restoreSpace(data) {
       lane: card.lane,
       due: /^\d{4}-\d{2}-\d{2}$/.test(card.due) && !Number.isNaN(Date.parse(card.due)) ? card.due : '',
       ...(validPosition(card.position) ? { position: { x: card.position.x, y: card.position.y } } : {}),
+      ...(card.lane === 'shopping' ? { shoppingCategory: shoppingCategory(card.shoppingCategory) } : {}),
     }))
   }
   const isPoint = (point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite)

@@ -84,7 +84,19 @@ body[data-mode="owner"] .mode { background: #dcebdc; color: #275746; }
 .matrix > .lane:nth-child(2) { border-bottom-left-radius: 12px; }
 .matrix > .lane:nth-child(3) { border-top-right-radius: 12px; }
 .matrix > .lane:nth-child(4) { border-top-left-radius: 12px; }
-.board.roadmap, .board.swot { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.board.roadmap { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.board.swot { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.roadmap .shopping-lane { grid-column: 1 / -1; }
+.shopping-columns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; }
+.shopping-category { min-width: 0; min-height: 8.5rem; padding: .55rem; border: 1px solid #d9c9a7; border-radius: 8px; background: #fff9eb; }
+.shopping-category .lane-heading { align-items: center; }
+.shopping-category h3 { font-size: .91rem; }
+.shopping-category[data-over="true"] { box-shadow: inset 0 0 0 3px #428478; }
+.side-lanes .shopping-columns { grid-template-columns: minmax(0, 1fr); }
+.side-lanes .shopping-category { min-height: 0; }
+.side-lanes .shopping-category .lane-heading { padding-bottom: 0; }
+.side-lanes .shopping-category .cards:not(:has(.empty)) { margin-top: .4rem; }
+.side-lanes .shopping-category .cards:has(.empty) { display: none; }
 .side-lanes { gap: .55rem; }
 .lane { min-width: 0; display: flex; flex-direction: column; min-height: 9rem; padding: clamp(.4rem, 1vw, .7rem); border-radius: 11px; background: var(--lane); border: 1px solid #3441372c; }
 .lane[data-over="true"] { box-shadow: inset 0 0 0 3px #428478; }
@@ -219,6 +231,7 @@ select { appearance: none; padding-right: 1.8rem; background-image: linear-gradi
 .notice { position: fixed; z-index: 6; bottom: 1rem; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); background: var(--paper); padding: .4rem .55rem .4rem .75rem; border: 1px solid #cfd6ca; border-radius: 9px; box-shadow: 0 5px 22px #17293430; display: flex; align-items: center; gap: .55rem; font-size: .9rem; }
 
 @media (max-width: 930px) {
+  .shopping-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .framework-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .matrix-layout { grid-template-columns: minmax(0, 1fr); }
   .matrix-island { width: min(100%, 46rem); }
