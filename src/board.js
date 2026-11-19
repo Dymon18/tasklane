@@ -18,10 +18,10 @@ export const lanes = {
   highway: { name: 'Goal Highway', hint: 'Long-term goals', color: '#f0eaf7', car: '#e8d8f4', symbol: '⇅' },
   parking: { name: 'Parking Lot', hint: 'Ideas to revisit', color: '#edf1e4', car: '#e1ebcd', symbol: 'P' },
   shopping: { name: 'Shopping Cart', hint: 'Things to pick up', color: '#f8efdb', car: '#f8e4ae', symbol: '🛒' },
-  express: { name: 'Express Lane', heading: 'Urgent + important', hint: 'Do now', color: '#fbede7', car: '#f7cfc0' },
-  schedule: { name: 'Scenic Route', heading: 'Not urgent + important', hint: 'Schedule', color: '#e7f2f3', car: '#c5e5e7' },
-  delegate: { name: 'Carpool Lane', heading: 'Urgent + not important', hint: 'Delegate', color: '#f7eedc', car: '#f7dfab' },
-  skip: { name: 'Off-Ramp', heading: 'Not urgent + not important', hint: 'Let go', color: '#edf1e5', car: '#dfebcd' },
+  express: { name: 'Express Lane', color: '#fbede7', car: '#f7cfc0' },
+  schedule: { name: 'Scenic Route', color: '#e7f2f3', car: '#c5e5e7' },
+  delegate: { name: 'Carpool Lane', color: '#f7eedc', car: '#f7dfab' },
+  skip: { name: 'Off Road', color: '#edf1e5', car: '#dfebcd' },
   strengths: { name: 'Strengths', hint: 'What’s working?', color: '#bfdae0', car: '#79a6b6', swot: true },
   weaknesses: { name: 'Weaknesses', hint: 'Where can you improve?', color: '#f9d4ad', car: '#cd9a65', swot: true },
   opportunities: { name: 'Opportunities', hint: 'What could help you grow?', color: '#d6e5c7', car: '#91a775', swot: true },
@@ -101,6 +101,14 @@ export function createBoard({ get, update, notify }) {
   const sizeObserver = typeof ResizeObserver !== 'undefined'
     ? new ResizeObserver((entries) => entries.forEach(({ target }) => layOutNotes(target))) : null
   for (const [id, name] of Object.entries(shoppingCategories)) categoryInput.add(new Option(name, id))
+  matrix.forEach((key, index) => {
+    const lane = lanes[key]
+    const label = create('div', '', 'matrix-lane-label')
+    const name = create('h2', lane.name)
+    name.id = 'matrix-' + key
+    label.append(name, button('+', '', () => edit(null, key), 'Add to ' + lane.name))
+    byId(index < 2 ? 'matrix-labels-top' : 'matrix-labels-bottom').append(label)
+  })
 
   function focusCard(id, selector) {
     const matches = document.querySelectorAll(`[data-card-id="${CSS.escape(id)}"] ${selector}`)
@@ -251,31 +259,33 @@ export function createBoard({ get, update, notify }) {
         const section = create('section', '', 'lane')
         section.dataset.lane = key
         section.style.setProperty('--lane', lane.color)
+        const headingId = group.id + '-' + key
+        section.setAttribute('aria-labelledby', headingId)
+        const laneCards = cards.filter((card) => card.lane === key)
+        if (group === matrixBoard) {
+          const items = create('div', '', 'cards free-notes')
+          items.append(...laneCards.map(makeCard))
+          section.append(items)
+          return section
+        }
         const heading = create('header', '', 'lane-heading')
         const name = create('div')
-        const headingId = group.id + '-' + key
-        const label = create('h2', lane.heading ?? lane.name)
+        const label = create('h2', lane.name)
         label.id = headingId
-        section.setAttribute('aria-labelledby', headingId)
         if (lane.symbol) {
           const symbol = create('span', lane.symbol, 'lane-symbol')
           symbol.setAttribute('aria-hidden', 'true')
           label.prepend(symbol)
         }
-        name.append(label)
-        if (lane.heading) {
-          const hint = document.createElement('p')
-          hint.append(create('em', lane.name), ' · ' + lane.hint)
-          name.append(hint)
-        } else name.append(create('p', lane.hint))
+        name.append(label, create('p', lane.hint))
         heading.append(name, button('+', '', () => edit(null, key), 'Add to ' + lane.name))
         if (key === 'shopping') {
           section.classList.add('shopping-lane')
-          section.append(heading, shoppingColumns(cards.filter((card) => card.lane === key), headingId))
+          section.append(heading, shoppingColumns(laneCards, headingId))
           return section
         }
-        const items = create('div', '', group.id === 'matrix' ? 'cards free-notes' : 'cards')
-        items.append(...cards.filter((card) => card.lane === key).map(makeCard))
+        const items = create('div', '', 'cards')
+        items.append(...laneCards.map(makeCard))
         if (!items.childElementCount) items.append(create('p', lane.swot ? 'No notes yet' : 'No tasks yet', 'empty'))
         section.append(heading, items)
         return section

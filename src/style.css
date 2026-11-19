@@ -67,15 +67,20 @@ body[data-mode="owner"] .mode { background: #dcebdc; color: #275746; }
 
 .matrix-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(13.5rem, 27%); align-items: start; gap: 1rem; }
 .matrix-layout.side-hidden { grid-template-columns: minmax(0, 1fr); }
-.matrix-island { --axis: clamp(1.65rem, 3vw, 2.5rem); --matrix-space: 12rem; display: grid; grid-template-columns: var(--axis) minmax(0, 1fr); grid-template-rows: var(--axis) auto; width: min(100%, max(34rem, calc(100svh - var(--matrix-space)))); margin-inline: auto; padding: .35rem .5rem .5rem .2rem; border: 1px solid #bdcabc; border-radius: 15px; box-shadow: 0 3px 0 #d3ded1; background: #fffef7; }
+.matrix-island { --axis: clamp(1.65rem, 3vw, 2.5rem); --matrix-space: 12rem; --road-width: clamp(.7rem, 2vw, 1.35rem); display: grid; grid-template-columns: var(--axis) minmax(0, 1fr); grid-template-rows: var(--axis) auto auto auto; width: min(100%, max(34rem, calc(100svh - var(--matrix-space)))); margin-inline: auto; padding: .35rem .5rem .5rem .2rem; border: 1px solid #bdcabc; border-radius: 15px; box-shadow: 0 3px 0 #d3ded1; background: #fffef7; }
 .ribbon-hidden .matrix-island, .side-hidden .matrix-island { --matrix-space: 7rem; }
 .axis-x, .axis-y { display: grid; place-items: center; color: #364941; font-size: clamp(.8rem, 1.25vw, .98rem); font-weight: 750; }
-.axis-x { grid-area: 1 / 2; grid-template-columns: 1fr 1fr; }
-.axis-y { grid-area: 2 / 1; grid-template-rows: 1fr 1fr; }
+.axis-x { grid-area: 1 / 2; grid-template-columns: 1fr 1fr; gap: var(--road-width); }
+.axis-y { grid-area: 3 / 1; grid-template-rows: 1fr 1fr; gap: var(--road-width); }
 .axis-y span { writing-mode: vertical-rl; transform: rotate(180deg); }
-.matrix-roads { grid-area: 2 / 2; min-width: 0; border-radius: 11px; overflow: hidden; outline: 1px solid #435353; }
+.matrix-lane-labels { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--road-width); }
+.matrix-lane-labels-top { grid-area: 2 / 2; padding-bottom: .35rem; }
+.matrix-lane-labels-bottom { grid-area: 4 / 2; padding-top: .35rem; }
+.matrix-lane-label { display: flex; align-items: center; justify-content: center; gap: .4rem; }
+.matrix-lane-label h2 { color: var(--muted); font-size: clamp(.75rem, 1.2vw, .93rem); font-style: italic; font-weight: 650; }
+.matrix-roads { grid-area: 3 / 2; min-width: 0; border-radius: 11px; overflow: hidden; outline: 1px solid #435353; }
 .board { display: grid; gap: .75rem; min-width: 0; }
-.board.matrix { --road-width: clamp(.7rem, 2vw, 1.35rem); position: relative; aspect-ratio: 1; min-width: 0; grid-template: repeat(2,minmax(0,1fr)) / repeat(2,minmax(0,1fr)); gap: var(--road-width); background: var(--road); }
+.board.matrix { position: relative; aspect-ratio: 1; min-width: 0; grid-template: repeat(2,minmax(0,1fr)) / repeat(2,minmax(0,1fr)); gap: var(--road-width); background: var(--road); }
 .board.matrix::before, .board.matrix::after { content: ''; position: absolute; pointer-events: none; opacity: .95; }
 .board.matrix::before { inset: calc(50% - 1px) 0 auto; height: 2px; background: repeating-linear-gradient(to right, #ede8d1 0 12px, transparent 12px 23px); }
 .board.matrix::after { inset: 0 auto 0 calc(50% - 1px); width: 2px; background: repeating-linear-gradient(to bottom, #ede8d1 0 12px, transparent 12px 23px); }
@@ -103,9 +108,8 @@ body[data-mode="owner"] .mode { background: #dcebdc; color: #275746; }
 .lane-heading { display: flex; justify-content: space-between; align-items: start; gap: .35rem; padding-bottom: .5rem; }
 .lane-heading h2 { font-weight: 800; font-size: clamp(.85rem, 1.5vw, 1.08rem); line-height: 1.18; }
 .lane-heading p { color: var(--muted); margin-top: .21rem; font-size: .83rem; line-height: 1.18; }
-.lane-heading em { font-weight: 650; }
-.lane-heading button { min-width: 30px; height: 30px; flex: none; border: 1px solid #263b373c; border-radius: 7px; background: #fffdfaab; color: var(--ink); font-size: 1.12rem; line-height: 1; }
-.lane-heading button:hover { background: #fffefa; }
+.lane-heading button, .matrix-lane-label button { min-width: 30px; height: 30px; flex: none; border: 1px solid #263b373c; border-radius: 7px; background: #fffdfaab; color: var(--ink); font-size: 1.12rem; line-height: 1; }
+.lane-heading button:hover, .matrix-lane-label button:hover { background: #eff3e9; }
 .lane-symbol { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; margin-right: .32rem; border-radius: 5px; background: #ffffff9c; font-size: .85rem; }
 .cards, .task-card { --note-base: clamp(3.5rem, calc(6.4rem * var(--car-scale, 1)), 9.6rem); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--note-base)), var(--note-base))); grid-auto-rows: min-content; gap: .65rem; min-height: 0; padding: 0 .28rem .28rem; align-content: start; }
@@ -246,10 +250,7 @@ select { appearance: none; padding-right: 1.8rem; background-image: linear-gradi
   .brand img { width: 32px; height: 32px; }
   .matrix-island { --axis: 1.3rem; padding: .15rem .25rem .25rem 0; }
   .matrix .lane { padding: .3rem; }
-  .matrix .lane-heading { padding-bottom: .3rem; }
-  .matrix .lane-heading h2 { font-size: .78rem; }
-  .matrix .lane-heading p { font-size: .73rem; }
-  .matrix .lane-heading button { min-width: 23px; height: 26px; }
+  .matrix-lane-label button { min-width: 24px; height: 26px; }
   .free-notes .task-card { grid-template-rows: .65rem minmax(0,1fr) 1rem; padding: .16rem .22rem .1rem; }
   .free-notes .task-title { font-size: clamp(.61rem, calc(.68rem * var(--scale)), .9rem); }
   .free-notes .task-action { height: 16px; }
