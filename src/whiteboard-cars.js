@@ -1,6 +1,6 @@
 import {
-  createCarNote, layOutNotes, measureMatrix, otherMatrixPositions,
-  placeNote, renderedPosition, setPreferredPosition, titleLimit,
+  carColor, createCarNote, fillCarColors, layOutNotes, measureMatrix, otherMatrixPositions,
+  placeNote, renderedPosition, setPreferredPosition, titleLimit, whiteboardCarDefault,
 } from './car-notes.js'
 import { clampPosition, findMatrixSpot, fitsMatrix, inset, randomPosition } from './matrix-placement.js'
 
@@ -25,6 +25,9 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
   const heading = byId('whiteboard-car-heading')
   const title = byId('whiteboard-car-title')
   const notes = byId('whiteboard-car-notes')
+  const colorField = byId('whiteboard-car-color')
+  const colorInput = fillCarColors(colorField)
+  colorField.style.setProperty('--default-car-tint', whiteboardCarDefault)
   const fields = byId('whiteboard-car-fields')
   const pasteField = byId('whiteboard-car-paste-field')
   const pasteText = byId('whiteboard-car-paste-text')
@@ -34,7 +37,7 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
   const enabled = () => Boolean(boardId()) && !panel.hidden
   let editing = null
   let dragging = null
-  let copiedText = ''
+  let copiedCar = null
   let revision = 0
 
   function carsFor(state, id = boardId()) {
@@ -95,6 +98,7 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
     removeButton.hidden = copyButton.hidden = !car
     title.value = car?.title ?? ''
     notes.value = car?.notes ?? ''
+    colorInput.value = carColor(car?.color)
     error.textContent = ''
     dialog.showModal()
     const firstField = pasting ? pasteText : title
@@ -110,6 +114,11 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
     focusCar(car.id)
   }
 
+  function addPasted(text) {
+    const color = text === copiedCar?.text ? copiedCar.color : ''
+    add({ ...fromClipboard(text), color })
+  }
+
   form.addEventListener('submit', (event) => {
     event.preventDefault()
     if (!enabled()) return
@@ -119,6 +128,7 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
       error.textContent = 'Enter a title up to 25 characters.'
       return
     }
+    values.color = carColor(colorInput.value)
     dialog.close()
     if (editing) {
       const car = editing
@@ -147,10 +157,11 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
       error.textContent = 'Enter a title up to 25 characters.'
       return
     }
-    copiedText = [currentTitle, notes.value.trim()].filter(Boolean).join('\n')
+    const text = [currentTitle, notes.value.trim()].filter(Boolean).join('\n')
+    copiedCar = { text, color: carColor(colorInput.value) }
     const request = revision
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(copiedText)
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text)
     } catch {
       // Paste car also accepts the in-app copy when clipboard access is unavailable.
     }
@@ -167,8 +178,8 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
       // Manual paste is available if the browser blocks clipboard reads.
     }
     if (request !== revision || !enabled() || dialog.open) return
-    const source = text?.trim() || copiedText
-    if (source) add(fromClipboard(source))
+    const source = text?.trim() || copiedCar?.text
+    if (source) addPasted(source)
     else openEditor(null, true)
   })
 
@@ -178,7 +189,7 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
     if (!text) return
     event.preventDefault()
     revision++
-    add(fromClipboard(text))
+    addPasted(text)
   })
 
   function moveCar(car, position, geometry) {
@@ -267,7 +278,7 @@ export function createWhiteboardCars({ get, update, notify, boardId }) {
       cancelDrag()
       if (dialog.open) dialog.close()
       editing = null
-      if (clearCopy) copiedText = ''
+      if (clearCopy) copiedCar = null
     },
   }
 }

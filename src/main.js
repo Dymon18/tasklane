@@ -1,6 +1,6 @@
 import './style.css'
 import { createBoard, lanes, shoppingCategory } from './board.js'
-import { titleLimit } from './car-notes.js'
+import { carColor, titleLimit } from './car-notes.js'
 import { createTools, defaultOptions } from './tools.js'
 import { createWhiteboard } from './whiteboard.js'
 import { frameworks } from './templates.js'
@@ -42,6 +42,7 @@ function restoreSpace(data) {
       id: card.id,
       title: asText(card.title, 160),
       notes: asText(card.notes, 2000),
+      color: carColor(card.color),
       done: Boolean(card.done),
       lane: card.lane,
       due: /^\d{4}-\d{2}-\d{2}$/.test(card.due) && !Number.isNaN(Date.parse(card.due)) ? card.due : '',
@@ -67,8 +68,8 @@ function restoreSpace(data) {
     if (Array.isArray(cars)) {
       state.frameworkCars[id] = cars.filter((car) =>
         car && typeof car.id === 'string' && typeof car.title === 'string' && car.title.trim() && validPosition(car.position))
-        .map(({ id, title, notes, position }) => ({
-          id, title: asText(title, titleLimit), notes: asText(notes, 2000),
+        .map(({ id, title, notes, color, position }) => ({
+          id, title: asText(title, titleLimit), notes: asText(notes, 2000), color: carColor(color),
           position: { x: position.x, y: position.y },
         }))
     }

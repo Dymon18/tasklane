@@ -1,5 +1,6 @@
 import { clampPosition, findMatrixSpot, fitsMatrix, inset, randomPosition } from './matrix-placement.js'
-import { createCarNote, layOutNotes, measureMatrix, otherMatrixPositions, renderedPosition, setPreferredPosition, titleLimit } from './car-notes.js'
+import { carColor, createCarNote, fillCarColors, layOutNotes, measureMatrix, otherMatrixPositions,
+  renderedPosition, setPreferredPosition, titleLimit } from './car-notes.js'
 
 const byId = (id) => document.getElementById(id)
 const create = (tag, value, className) => {
@@ -48,6 +49,8 @@ export function createBoard({ get, update, notify }) {
   const title = byId('task-title')
   const notes = byId('task-notes')
   const laneInput = byId('task-lane')
+  const colorField = byId('task-car-color')
+  const colorInput = fillCarColors(colorField)
   const due = byId('task-due')
   const categoryField = byId('task-shopping-field')
   const categoryInput = byId('task-shopping-category')
@@ -87,6 +90,7 @@ export function createBoard({ get, update, notify }) {
     laneInput.replaceChildren(...Object.entries(lanes).filter(([, option]) => Boolean(option.swot) === Boolean(isSwot))
       .map(([key, option]) => new Option(option.name, key)))
     laneInput.value = card?.lane ?? lane
+    colorInput.value = carColor(card?.color)
     categoryInput.value = shoppingCategory(card?.shoppingCategory ?? category)
     byId('task-error').textContent = ''
     byId('task-delete').hidden = !card
@@ -101,6 +105,7 @@ export function createBoard({ get, update, notify }) {
     due.closest('label').hidden = Boolean(isNote)
     categoryField.hidden = laneInput.value !== 'shopping'
     categoryInput.disabled = categoryField.hidden
+    colorField.style.setProperty('--default-car-tint', lanes[laneInput.value].car)
   }
 
   function remove(card) {
@@ -136,9 +141,8 @@ export function createBoard({ get, update, notify }) {
   }
 
   function makeCard(card) {
-    const { item, content } = createCarNote(card, () => edit(card))
+    const { item, content } = createCarNote(card, () => edit(card), lanes[card.lane].car)
     if (card.done) item.classList.add('done')
-    item.style.setProperty('--car', lanes[card.lane].car)
     if (card.position) setPreferredPosition(item, card.position)
     if (card.due) content.append(create('span', dateText(card.due), 'task-detail'))
     item.append(actions(card))
@@ -388,7 +392,7 @@ export function createBoard({ get, update, notify }) {
     const lane = laneInput.value
     const id = editing?.id ?? crypto.randomUUID()
     const item = { title: name, notes: notes.value.trim(), due: lanes[lane].swot ? '' : due.value,
-      lane, done: !lanes[lane].swot && Boolean(editing?.done),
+      lane, color: carColor(colorInput.value), done: !lanes[lane].swot && Boolean(editing?.done),
       ...(lane === 'shopping' ? { shoppingCategory: shoppingCategory(categoryInput.value) } : {}) }
     if (matrix.includes(lane) && lane !== editing?.lane) {
       const area = matrixBoard.querySelector(`[data-lane="${lane}"] .free-notes`)

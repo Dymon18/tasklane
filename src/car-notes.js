@@ -1,6 +1,40 @@
 import { arrangeMatrix, inset, matrixSpace } from './matrix-placement.js'
 
 export const titleLimit = 25
+export const whiteboardCarDefault = '#f7dfab'
+
+const carPalette = {
+  rose: ['Rose', '#f7c5d3'],
+  peach: ['Peach', '#f8ccb3'],
+  butter: ['Butter', '#f7e49f'],
+  mint: ['Mint', '#c4e7cd'],
+  aqua: ['Aqua', '#bfe8e9'],
+  sky: ['Sky', '#c9ddfa'],
+  lavender: ['Lavender', '#e2cff7'],
+  slate: ['Slate', '#dee4e8'],
+}
+
+export function carColor(value) {
+  return typeof value === 'string' && Object.hasOwn(carPalette, value) ? value : ''
+}
+
+export function fillCarColors(fieldset) {
+  const swatches = document.createElement('div')
+  swatches.className = 'car-color-swatches'
+  for (const [value, [name, tint]] of [['', ['Default', 'var(--default-car-tint)']], ...Object.entries(carPalette)]) {
+    const swatch = document.createElement('input')
+    swatch.type = 'radio'
+    swatch.name = 'car-color'
+    swatch.value = value
+    swatch.defaultChecked = value === ''
+    swatch.title = name
+    swatch.setAttribute('aria-label', name)
+    swatch.style.setProperty('--swatch-tint', tint)
+    swatches.append(swatch)
+  }
+  fieldset.append(swatches)
+  return fieldset.form.elements.namedItem('car-color')
+}
 
 export function placeNote(note, { x, y }) {
   note.style.setProperty('--note-x', x)
@@ -55,10 +89,11 @@ export function otherMatrixPositions(area, cardId) {
     .map(renderedPosition).filter(Boolean)
 }
 
-export function createCarNote(car, edit) {
+export function createCarNote(car, edit, defaultTint = whiteboardCarDefault) {
   const item = document.createElement('article')
   item.className = 'task-card'
   item.dataset.cardId = car.id
+  item.style.setProperty('--car', carPalette[carColor(car.color)]?.[1] ?? defaultTint)
   const token = document.createElement('span')
   token.className = 'car-token'
   token.setAttribute('aria-hidden', 'true')
