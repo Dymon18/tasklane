@@ -1,5 +1,6 @@
 import './style.css'
 import { createBoard, lanes, shoppingCategory } from './board.js'
+import { titleLimit } from './car-notes.js'
 import { createTools, defaultOptions } from './tools.js'
 import { createWhiteboard } from './whiteboard.js'
 import { frameworks } from './templates.js'
@@ -21,7 +22,7 @@ const demoCards = [
   { title: 'Ask for parcel pickup', lane: 'delegate' },
   { title: 'Sort old app downloads', lane: 'skip' },
 ]
-const empty = () => ({ cards: [], marks: [], frameworkMarks: {}, wheel: defaultOptions })
+const empty = () => ({ cards: [], marks: [], frameworkMarks: {}, frameworkCars: {}, wheel: defaultOptions })
 const otherSpaces = [...spaces.keys()].filter((id) => id !== 'home')
 const restoreSpaces = (data) => Object.fromEntries(otherSpaces.map((id) => [id, restoreSpace(data?.[id])]))
 const demo = () => ({ ...empty(), spaces: restoreSpaces(), cards: demoCards.map((card, index) => ({
@@ -58,9 +59,19 @@ function restoreSpace(data) {
     ))
   state.marks = cleanMarks(data.marks)
   for (const id of Object.keys(frameworks)) {
-    if (id === 'blank') continue
-    const marks = cleanMarks(data.frameworkMarks?.[id])
-    if (marks.length) state.frameworkMarks[id] = marks
+    if (id !== 'blank') {
+      const marks = cleanMarks(data.frameworkMarks?.[id])
+      if (marks.length) state.frameworkMarks[id] = marks
+    }
+    const cars = data.frameworkCars?.[id]
+    if (Array.isArray(cars)) {
+      state.frameworkCars[id] = cars.filter((car) =>
+        car && typeof car.id === 'string' && typeof car.title === 'string' && car.title.trim() && validPosition(car.position))
+        .map(({ id, title, notes, position }) => ({
+          id, title: asText(title, titleLimit), notes: asText(notes, 2000),
+          position: { x: position.x, y: position.y },
+        }))
+    }
   }
   if (typeof data.wheel === 'string') state.wheel = data.wheel.slice(0, 500)
   return state

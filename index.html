@@ -120,11 +120,16 @@
             <button type="button" class="button neutral" id="canvas-clear">Clear</button>
             <label class="canvas-zoom">Zoom<select id="canvas-zoom"><option value="75">75%</option><option value="100" selected>Fit</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option></select></label>
           </div>
+          <div class="canvas-car-tools" role="group" aria-label="Whiteboard car notes">
+            <button type="button" id="whiteboard-car-add" class="button neutral">+ Add car</button>
+            <button type="button" id="whiteboard-car-paste" class="button neutral">Paste car</button>
+          </div>
           <p id="canvas-hint">Drag across the board to draw.</p>
           <div class="canvas-scroller" tabindex="0" aria-label="Scrollable whiteboard">
             <div class="canvas-stack" id="canvas-stack">
               <canvas id="template-canvas" width="1200" height="700" aria-hidden="true"></canvas>
               <canvas id="canvas" width="1200" height="700" aria-label="Drawing canvas" tabindex="0"></canvas>
+              <div id="whiteboard-cars" class="whiteboard-car-layer" role="group" aria-label="Car notes"></div>
             </div>
           </div>
         </div>
@@ -237,6 +242,26 @@
       <div class="dialog-heading"><h2 id="text-heading">Add text</h2><button type="button" class="close" data-close="text-editor" aria-label="Close text editor">×</button></div>
       <label>Text<input id="canvas-text" required maxlength="120" autocomplete="off"></label>
       <div class="dialog-actions"><button type="submit" class="button primary">Place text</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="whiteboard-car-editor" aria-labelledby="whiteboard-car-heading">
+    <form id="whiteboard-car-form" method="dialog">
+      <div class="dialog-heading">
+        <h2 id="whiteboard-car-heading">Add car</h2>
+        <button type="button" class="close" data-close="whiteboard-car-editor" aria-label="Close car editor">×</button>
+      </div>
+      <div id="whiteboard-car-fields">
+        <label>Title (25 characters max)<input id="whiteboard-car-title" required maxlength="25" autocomplete="off"></label>
+        <label>Notes<textarea id="whiteboard-car-notes" rows="3" maxlength="2000"></textarea></label>
+      </div>
+      <label id="whiteboard-car-paste-field" hidden>Text to paste<textarea id="whiteboard-car-paste-text" rows="4" maxlength="2026" disabled></textarea></label>
+      <p id="whiteboard-car-error" class="error" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" id="whiteboard-car-remove" class="button danger" hidden>Remove</button>
+        <button type="button" id="whiteboard-car-copy" class="button neutral" hidden>Copy car</button>
+        <button type="submit" class="button primary">Save car</button>
+      </div>
     </form>
   </dialog>
 

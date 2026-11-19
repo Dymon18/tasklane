@@ -1,4 +1,5 @@
-import { arrangeMatrix, clampPosition, findMatrixSpot, fitsMatrix, inset, matrixSpace, randomPosition } from './matrix-placement.js'
+import { clampPosition, findMatrixSpot, fitsMatrix, inset, randomPosition } from './matrix-placement.js'
+import { createCarNote, layOutNotes, measureMatrix, otherMatrixPositions, renderedPosition, setPreferredPosition, titleLimit } from './car-notes.js'
 
 const byId = (id) => document.getElementById(id)
 const create = (tag, value, className) => {
@@ -41,53 +42,6 @@ const matrix = ['express', 'schedule', 'delegate', 'skip']
 const swot = ['strengths', 'weaknesses', 'opportunities', 'threats']
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const dateText = (day) => day ? dateFormat.format(new Date(day + 'T12:00:00')) : ''
-const titleLimit = 25
-
-function placeNote(note, { x, y }) {
-  note.style.setProperty('--note-x', x)
-  note.style.setProperty('--note-y', y)
-}
-
-function renderedPosition(note) {
-  const x = note.style.getPropertyValue('--note-x')
-  const y = note.style.getPropertyValue('--note-y')
-  return x && y ? { x: Number(x), y: Number(y) } : null
-}
-
-function measureMatrix(area) {
-  const bounds = area.getBoundingClientRect()
-  if (Math.min(bounds.width, bounds.height) <= inset * 2) return null
-  const sample = area.querySelector('.task-card')
-  const note = sample ?? create('article', '', 'task-card')
-  if (!sample) {
-    note.style.visibility = 'hidden'
-    area.append(note)
-  }
-  const size = Number.parseFloat(getComputedStyle(note).width) || note.offsetWidth
-  if (!sample) note.remove()
-  return size ? { bounds, space: matrixSpace(bounds.width, bounds.height, size) } : null
-}
-
-function layOutNotes(area) {
-  const notes = [...area.querySelectorAll('.task-card')]
-  area.style.removeProperty('--packed-note-size')
-  if (!notes.length) return
-  const geometry = measureMatrix(area)
-  if (!geometry) return
-  const { bounds, space } = geometry
-  const preferred = notes.map((note) => note.dataset.positioned ? {
-    x: Number(note.dataset.savedX), y: Number(note.dataset.savedY),
-  } : null)
-  const { size, positions } = arrangeMatrix(preferred, bounds.width, bounds.height, space.size)
-  if (size < space.size) area.style.setProperty('--packed-note-size', size + 'px')
-  notes.forEach((note, index) => placeNote(note, positions[index]))
-}
-
-function otherMatrixPositions(area, cardId) {
-  return [...area.querySelectorAll('.task-card')].filter((note) => note.dataset.cardId !== cardId)
-    .map(renderedPosition).filter(Boolean)
-}
-
 export function createBoard({ get, update, notify }) {
   const editor = byId('task-editor')
   const form = byId('task-form')
@@ -182,21 +136,12 @@ export function createBoard({ get, update, notify }) {
   }
 
   function makeCard(card) {
-    const item = create('article', '', 'task-card' + (card.done ? ' done' : ''))
-    item.dataset.cardId = card.id
+    const { item, content } = createCarNote(card, () => edit(card))
+    if (card.done) item.classList.add('done')
     item.style.setProperty('--car', lanes[card.lane].car)
-    if (card.position) {
-      item.dataset.positioned = 'true'
-      item.dataset.savedX = card.position.x
-      item.dataset.savedY = card.position.y
-      placeNote(item, card.position)
-    }
-    const token = create('span', '', 'car-token')
-    token.setAttribute('aria-hidden', 'true')
-    const content = button('', 'task-content', () => edit(card), 'Edit ' + card.title)
-    content.append(create('strong', card.title, 'task-title'))
+    if (card.position) setPreferredPosition(item, card.position)
     if (card.due) content.append(create('span', dateText(card.due), 'task-detail'))
-    item.append(token, content, actions(card))
+    item.append(actions(card))
     item.addEventListener('pointerdown', (event) => startDrag(event, card, item))
     return item
   }

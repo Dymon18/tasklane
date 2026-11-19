@@ -1,4 +1,5 @@
 import { drawTemplate, frameworks } from './templates.js'
+import { createWhiteboardCars } from './whiteboard-cars.js'
 
 const byId = (id) => document.getElementById(id)
 
@@ -19,6 +20,7 @@ export function createWhiteboard({ get, update, notify }) {
   const toolButtons = document.querySelectorAll('[data-tool]')
   const undo = byId('canvas-undo')
   const clear = byId('canvas-clear')
+  const cars = createWhiteboardCars({ get, update, notify, boardId: () => template.value })
   let tool = 'pen'
   let active = null
   let pan = null
@@ -58,16 +60,18 @@ export function createWhiteboard({ get, update, notify }) {
   function renderTemplate() {
     const id = template.value
     byId('panel-whiteboard').dataset.template = id
+    cars.render()
     if (!id) return
     canvas.setAttribute('aria-label', `${frameworks[id]} drawing canvas`)
     drawTemplate(layer, id)
     draw()
   }
-  function resetInteraction() {
+  function resetInteraction(clearCopy = false) {
     active = null
     pan = null
     textPoint = null
     if (textEditor.open) textEditor.close()
+    cars.reset(clearCopy)
   }
 
   function showGallery() {
@@ -261,7 +265,7 @@ export function createWhiteboard({ get, update, notify }) {
     select,
     showGallery,
     reset() {
-      resetInteraction()
+      resetInteraction(true)
       renderTemplate()
     },
   }
