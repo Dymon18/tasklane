@@ -3,14 +3,166 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="TaskLane is a road-themed planning dashboard.">
+  <meta name="description" content="TaskLane is a road-themed planning dashboard for tasks, goals, and ideas.">
+  <meta name="theme-color" content="#f8f7ef">
+  <link rel="icon" href="/tasklane-icon.png" type="image/png">
   <title>TaskLane</title>
-  <style>
-    body {background:#f7f5ed;color:#23313f;font:16px system-ui,sans-serif;margin:0}
-    main {max-width:40rem;margin:16vh auto;padding:2rem}
-    h1 {font-size:clamp(3rem,10vw,6rem);letter-spacing:-.07em;line-height:.95;margin:0}
-    p {line-height:1.6}
-  </style>
 </head>
-<body><main><h1>TaskLane</h1><p>The RoadMap dashboard is being built.</p></main></body>
+<body data-mode="demo">
+  <header class="topbar">
+    <div class="top-inner">
+      <a class="brand" href="./"><span class="brand-icon" aria-hidden="true"><i></i></span>TaskLane</a>
+      <div class="account">
+        <span id="mode" class="mode">Demo mode</span>
+        <button id="account" class="button neutral" type="button">Dymon login</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <nav class="nav" aria-label="TaskLane tools">
+        <button type="button" data-view="roadmap" aria-current="page"><span aria-hidden="true">⌘</span>RoadMap</button>
+        <button type="button" data-view="matrix"><span aria-hidden="true">▦</span>Priority Matrix</button>
+        <button type="button" data-view="swot"><span aria-hidden="true">✦</span>SWOT Analysis</button>
+        <button type="button" data-view="whiteboard"><span aria-hidden="true">✎</span>Whiteboard</button>
+        <button type="button" data-view="decide"><span aria-hidden="true">◉</span>Decision Tools</button>
+      </nav>
+      <p id="mode-note">Demo edits reset when you refresh or close the tab.</p>
+      <a class="home-link" href="https://dymon18.github.io/">Dymon18 home</a>
+      <div class="sync">
+        <p id="sync-status" role="status"></p>
+        <button id="retry-sync" type="button" class="button neutral" hidden>Retry save</button>
+      </div>
+    </aside>
+
+    <main id="workspace">
+      <section id="panel-roadmap" aria-labelledby="roadmap-heading">
+        <header class="hero">
+          <div>
+            <h1 id="roadmap-heading">RoadMap<span>.</span></h1>
+            <p>Get ideas, tasks, and long-term goals into the right lane.</p>
+            <button type="button" class="button primary" id="new-task">+ Add task</button>
+          </div>
+          <img class="road-art" src="/tasklane-map.webp" alt="" width="1200" height="675">
+        </header>
+        <div class="overview" id="overview"></div>
+        <div class="board-controls">
+          <h2>Task lanes</h2>
+          <button class="button neutral" type="button" id="table-toggle" aria-pressed="false" aria-controls="task-table">Show task table</button>
+        </div>
+        <p class="board-hint" id="lane-hint">Drag a car to move a task, or change its lane in the editor.</p>
+        <div class="board roadmap" id="roadmap"></div>
+        <div class="task-table" id="task-table" hidden>
+          <table aria-label="RoadMap tasks">
+            <thead><tr><th scope="col">Task</th><th scope="col">Lane</th><th scope="col">Due</th><th scope="col">Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p id="table-empty" hidden>No tasks yet.</p>
+        </div>
+      </section>
+
+      <section id="panel-matrix" aria-labelledby="matrix-heading" hidden>
+        <header class="view-heading">
+          <div><h1 id="matrix-heading">Priority Matrix<span>.</span></h1><p>Use the Eisenhower matrix to sort tasks by urgency and importance.</p></div>
+          <button type="button" class="button primary" data-add-lane="express">+ Add task</button>
+        </header>
+        <div class="board matrix" id="matrix"></div>
+        <div class="board parking" id="matrix-parking"></div>
+      </section>
+
+      <section id="panel-swot" aria-labelledby="swot-heading" hidden>
+        <header class="view-heading">
+          <div><h1 id="swot-heading">SWOT Analysis<span>.</span></h1><p>Map strengths, weaknesses, opportunities, and threats.</p></div>
+          <button type="button" class="button primary" data-add-lane="strengths">+ Add note</button>
+        </header>
+        <div class="board swot" id="swot"></div>
+      </section>
+
+      <section id="panel-whiteboard" aria-labelledby="whiteboard-heading" hidden>
+        <header class="view-heading">
+          <div><h1 id="whiteboard-heading">Whiteboard<span>.</span></h1><p>Sketch a plan or jot down an idea.</p></div>
+        </header>
+        <div class="whiteboard">
+          <div class="canvas-tools" role="group" aria-label="Whiteboard tools">
+            <button type="button" class="button neutral" data-tool="pen" aria-pressed="true">Pen</button>
+            <button type="button" class="button neutral" data-tool="line" aria-pressed="false">Ruler</button>
+            <button type="button" class="button neutral" data-tool="text" aria-pressed="false">Text</button>
+            <label>Color <input id="ink" type="color" value="#34475a"></label>
+            <label>Size <input id="ink-size" type="range" min="2" max="32" value="6"></label>
+            <button type="button" class="button neutral" id="canvas-undo">Undo</button>
+            <button type="button" class="button neutral" id="canvas-clear">Clear</button>
+          </div>
+          <p id="canvas-hint">Drag across the board to draw.</p>
+          <canvas id="canvas" width="1200" height="700" aria-label="Drawing canvas"></canvas>
+        </div>
+      </section>
+
+      <section id="panel-decide" aria-labelledby="decide-heading" hidden>
+        <header class="view-heading">
+          <div><h1 id="decide-heading">Decision Tools<span>.</span></h1><p>Spin through your options or leave a yes-or-no call to a coin.</p></div>
+        </header>
+        <div class="decision-grid">
+          <article class="tool-card wheel-card">
+            <h2>Decision wheel</h2>
+            <label>Options <textarea id="wheel-options" rows="5" maxlength="500" placeholder="One option per line">Take a walk
+Read a chapter
+Start the next task</textarea></label>
+            <div class="wheel-wrap"><div id="wheel" class="wheel" aria-hidden="true"></div></div>
+            <button type="button" id="wheel-spin" class="button primary">Spin wheel</button>
+            <p id="wheel-result" class="result" role="status">Add 2–12 options, one per line.</p>
+          </article>
+          <article class="tool-card coin-card">
+            <h2>Coin flip</h2>
+            <div class="coin" id="coin" aria-hidden="true">H</div>
+            <button type="button" id="coin-flip" class="button primary">Flip coin</button>
+            <p id="coin-result" class="result" role="status">Heads or tails?</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="notice" class="notice" hidden>
+    <p id="status" role="status"></p>
+    <button type="button" id="undo-remove" class="button neutral" hidden>Undo</button>
+    <button type="button" id="dismiss" class="close" aria-label="Dismiss message">×</button>
+  </div>
+
+  <dialog id="task-editor" aria-labelledby="task-heading">
+    <form id="task-form" method="dialog">
+      <div class="dialog-heading"><h2 id="task-heading">Add task</h2><button type="button" class="close" data-close="task-editor" aria-label="Close editor">×</button></div>
+      <label>Title<input id="task-title" required maxlength="160" autocomplete="off"></label>
+      <label>Notes<textarea id="task-notes" rows="3" maxlength="2000"></textarea></label>
+      <div class="fields">
+        <label>Lane<select id="task-lane"></select></label>
+        <label>Due date<input id="task-due" type="date"></label>
+      </div>
+      <p id="task-error" class="error" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" id="task-delete" class="button danger" hidden>Remove</button>
+        <button type="submit" id="task-save" class="button primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="text-editor" aria-labelledby="text-heading">
+    <form id="text-form" method="dialog">
+      <div class="dialog-heading"><h2 id="text-heading">Add text</h2><button type="button" class="close" data-close="text-editor" aria-label="Close text editor">×</button></div>
+      <label>Text<input id="canvas-text" required maxlength="120" autocomplete="off"></label>
+      <div class="dialog-actions"><button type="submit" class="button primary">Place text</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="login" aria-labelledby="login-heading">
+    <div class="dialog-heading"><h2 id="login-heading">Dymon mode</h2><button type="button" class="close" data-close="login" aria-label="Close login">×</button></div>
+    <p>Sign in with GitHub to save your board and whiteboard across devices.</p>
+    <p id="setup" hidden>Run the <a href="https://github.com/Dymon18/tasklane/blob/main/supabase/001_tasklane_workspace.sql">TaskLane Supabase schema</a>, then refresh.</p>
+    <p id="login-status" role="status"></p>
+    <button id="github-login" type="button" class="button primary">Continue with GitHub</button>
+    <button id="setup-sign-out" type="button" class="button neutral" hidden>Sign out</button>
+  </dialog>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
 </html>
