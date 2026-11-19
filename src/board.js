@@ -1,3 +1,5 @@
+import { arrangeMatrix, clampPosition, findMatrixSpot, fitsMatrix, inset, matrixSpace, randomPosition } from './matrix-placement.js'
+
 const byId = (id) => document.getElementById(id)
 const create = (tag, value, className) => {
   const element = document.createElement(tag)
@@ -39,47 +41,51 @@ const matrix = ['express', 'schedule', 'delegate', 'skip']
 const swot = ['strengths', 'weaknesses', 'opportunities', 'threats']
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const dateText = (day) => day ? dateFormat.format(new Date(day + 'T12:00:00')) : ''
-const inset = 4
-const clampPosition = (value) => Math.max(0, Math.min(1, value))
+const titleLimit = 25
 
 function placeNote(note, { x, y }) {
   note.style.setProperty('--note-x', x)
   note.style.setProperty('--note-y', y)
 }
 
+function renderedPosition(note) {
+  const x = note.style.getPropertyValue('--note-x')
+  const y = note.style.getPropertyValue('--note-y')
+  return x && y ? { x: Number(x), y: Number(y) } : null
+}
+
+function measureMatrix(area) {
+  const bounds = area.getBoundingClientRect()
+  if (Math.min(bounds.width, bounds.height) <= inset * 2) return null
+  const sample = area.querySelector('.task-card')
+  const note = sample ?? create('article', '', 'task-card')
+  if (!sample) {
+    note.style.visibility = 'hidden'
+    area.append(note)
+  }
+  const size = Number.parseFloat(getComputedStyle(note).width) || note.offsetWidth
+  if (!sample) note.remove()
+  return size ? { bounds, space: matrixSpace(bounds.width, bounds.height, size) } : null
+}
+
 function layOutNotes(area) {
   const notes = [...area.querySelectorAll('.task-card')]
+  area.style.removeProperty('--packed-note-size')
   if (!notes.length) return
-  const bounds = area.getBoundingClientRect()
-  const size = notes[0].offsetWidth
-  if (!size || !bounds.width || !bounds.height) return
-  const width = Math.max(0, bounds.width - inset * 2 - size)
-  const height = Math.max(0, bounds.height - inset * 2 - size)
-  const columns = Math.floor(width / (size + 8)) + 1
-  const rows = Math.floor(height / (size + 8)) + 1
-  const slots = Array.from({ length: rows * columns }, (_, index) => ({
-    x: columns > 1 ? (index % columns) / (columns - 1) : 0,
-    y: rows > 1 ? Math.floor(index / columns) / (rows - 1) : 0,
-  }))
-  const occupied = notes.filter((note) => note.dataset.positioned).map((note) => ({
-    x: Number(note.style.getPropertyValue('--note-x')),
-    y: Number(note.style.getPropertyValue('--note-y')),
-  }))
-  let stacked = 0
-  for (const note of notes) {
-    if (note.dataset.positioned) continue
-    let place = slots.find((slot) => !occupied.some((other) =>
-      Math.abs(slot.x - other.x) * width < size + 3 && Math.abs(slot.y - other.y) * height < size + 3))
-    if (!place) {
-      const slot = slots[stacked % slots.length]
-      const offset = (1 + Math.floor(stacked / slots.length) % 8) * .04
-      place = { x: clampPosition(slot.x + (slot.x > .5 ? -offset : offset)),
-        y: clampPosition(slot.y + (slot.y > .5 ? -offset : offset)) }
-      stacked++
-    }
-    placeNote(note, place)
-    occupied.push(place)
-  }
+  const geometry = measureMatrix(area)
+  if (!geometry) return
+  const { bounds, space } = geometry
+  const preferred = notes.map((note) => note.dataset.positioned ? {
+    x: Number(note.dataset.savedX), y: Number(note.dataset.savedY),
+  } : null)
+  const { size, positions } = arrangeMatrix(preferred, bounds.width, bounds.height, space.size)
+  if (size < space.size) area.style.setProperty('--packed-note-size', size + 'px')
+  notes.forEach((note, index) => placeNote(note, positions[index]))
+}
+
+function otherMatrixPositions(area, cardId) {
+  return [...area.querySelectorAll('.task-card')].filter((note) => note.dataset.cardId !== cardId)
+    .map(renderedPosition).filter(Boolean)
 }
 
 export function createBoard({ get, update, notify }) {
@@ -122,6 +128,7 @@ export function createBoard({ get, update, notify }) {
     title.value = card?.title ?? ''
     notes.value = card?.notes ?? ''
     due.value = card?.due ?? ''
+    title.maxLength = Math.max(titleLimit, card?.title.length ?? 0)
     const isSwot = lanes[card?.lane ?? lane].swot
     laneInput.replaceChildren(...Object.entries(lanes).filter(([, option]) => Boolean(option.swot) === Boolean(isSwot))
       .map(([key, option]) => new Option(option.name, key)))
@@ -154,11 +161,10 @@ export function createBoard({ get, update, notify }) {
 
   function keepMatrixPositions(cards) {
     const byCard = new Map(cards.map((card) => [card.id, card]))
-    for (const note of matrixBoard.querySelectorAll('.task-card:not([data-positioned])')) {
-      const x = note.style.getPropertyValue('--note-x')
-      const y = note.style.getPropertyValue('--note-y')
+    for (const note of matrixBoard.querySelectorAll('.task-card')) {
+      const position = renderedPosition(note)
       const card = byCard.get(note.dataset.cardId)
-      if (card && x && y) card.position = { x: Number(x), y: Number(y) }
+      if (card && position) card.position = position
     }
   }
 
@@ -181,6 +187,8 @@ export function createBoard({ get, update, notify }) {
     item.style.setProperty('--car', lanes[card.lane].car)
     if (card.position) {
       item.dataset.positioned = 'true'
+      item.dataset.savedX = card.position.x
+      item.dataset.savedY = card.position.y
       placeNote(item, card.position)
     }
     const token = create('span', '', 'car-token')
@@ -371,28 +379,26 @@ export function createBoard({ get, update, notify }) {
     const anchor = before?.dataset.cardId
     const area = target?.querySelector('.free-notes')
     let position
+    let overlap = false
     if (area && sourceBounds && origin) {
-      const bounds = area.getBoundingClientRect()
-      const sample = area.querySelector('.task-card')
-      let noteSize = sample?.offsetWidth
-      if (!noteSize) {
-        const measure = makeCard(card)
-        measure.style.visibility = 'hidden'
-        area.append(measure)
-        noteSize = measure.offsetWidth || sourceBounds.width
-        measure.remove()
-      }
-      const fractionX = (x - sourceBounds.left) / Math.max(1, sourceBounds.width)
-      const fractionY = (y - sourceBounds.top) / Math.max(1, sourceBounds.height)
-      position = {
-        x: clampPosition((event.clientX - bounds.left - inset - fractionX * noteSize)
-          / Math.max(1, bounds.width - noteSize - inset * 2)),
-        y: clampPosition((event.clientY - bounds.top - inset - fractionY * noteSize)
-          / Math.max(1, bounds.height - noteSize - inset * 2)),
+      const geometry = measureMatrix(area)
+      if (geometry) {
+        const { bounds, space } = geometry
+        const fractionX = (x - sourceBounds.left) / Math.max(1, sourceBounds.width)
+        const fractionY = (y - sourceBounds.top) / Math.max(1, sourceBounds.height)
+        position = {
+          x: clampPosition((event.clientX - bounds.left - inset - fractionX * space.size) / Math.max(1, space.width)),
+          y: clampPosition((event.clientY - bounds.top - inset - fractionY * space.size) / Math.max(1, space.height)),
+        }
+        overlap = !fitsMatrix(position, otherMatrixPositions(area, card.id), space)
       }
     }
     cancelDrag()
     if (!destination || !origin) return
+    if (overlap) {
+      notify('Leave at least half of each car visible.')
+      return
+    }
     update(({ cards }) => {
       keepMatrixPositions(cards)
       cards.splice(cards.indexOf(card), 1)
@@ -420,6 +426,7 @@ export function createBoard({ get, update, notify }) {
     control.addEventListener('click', () => edit(null, control.dataset.addLane))
   }
   laneInput.addEventListener('change', updateEditor)
+  title.addEventListener('input', () => { byId('task-error').textContent = '' })
   byId('task-delete').addEventListener('click', () => {
     editor.close()
     if (editing) remove(editing)
@@ -427,8 +434,10 @@ export function createBoard({ get, update, notify }) {
   form.addEventListener('submit', (event) => {
     event.preventDefault()
     const name = title.value.trim()
-    if (!name) {
-      byId('task-error').textContent = 'Enter a title.'
+    const tooLong = name.length > titleLimit && name !== editing?.title
+    if (!name || tooLong) {
+      byId('task-error').textContent = tooLong ? 'Use 25 characters or fewer.' : 'Enter a title.'
+      title.focus()
       return
     }
     const lane = laneInput.value
@@ -436,6 +445,11 @@ export function createBoard({ get, update, notify }) {
     const item = { title: name, notes: notes.value.trim(), due: lanes[lane].swot ? '' : due.value,
       lane, done: !lanes[lane].swot && Boolean(editing?.done),
       ...(lane === 'shopping' ? { shoppingCategory: shoppingCategory(categoryInput.value) } : {}) }
+    if (matrix.includes(lane) && lane !== editing?.lane) {
+      const area = matrixBoard.querySelector(`[data-lane="${lane}"] .free-notes`)
+      const geometry = measureMatrix(area)
+      item.position = (geometry && findMatrixSpot(otherMatrixPositions(area, id), geometry.space, true)) ?? randomPosition()
+    }
     update(({ cards }) => {
       keepMatrixPositions(cards)
       if (editing) {
@@ -458,7 +472,7 @@ export function createBoard({ get, update, notify }) {
     laneToggle.setAttribute('aria-expanded', String(!side.hidden))
     laneToggle.textContent = side.hidden ? 'Show side lanes' : 'Hide side lanes'
   })
-  const sizes = [65, 80, 100, 125, 150]
+  const sizes = [50, 65, 80]
   const smaller = byId('smaller-cars')
   const larger = byId('larger-cars')
   let sizeIndex = 2
@@ -473,6 +487,7 @@ export function createBoard({ get, update, notify }) {
   }
   smaller.addEventListener('click', () => resize(-1))
   larger.addEventListener('click', () => resize(1))
+  resize(0)
 
   return {
     render,

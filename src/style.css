@@ -115,7 +115,7 @@ body[data-mode="owner"] .mode { background: #dcebdc; color: #275746; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--note-base)), var(--note-base))); grid-auto-rows: min-content; gap: .65rem; min-height: 0; padding: 0 .28rem .28rem; align-content: start; }
 .matrix .free-notes { display: block; flex: 1; position: relative; container-type: size; padding: 0; }
 .free-notes .task-card {
-  --note-size: max(0px, min(var(--note-base), calc(100cqw - 8px), calc(100cqh - 8px)));
+  --note-size: max(0px, min(var(--packed-note-size, var(--note-base)), calc(100cqw - 8px), calc(100cqh - 8px)));
   position: absolute;
   width: var(--note-size);
   height: var(--note-size);

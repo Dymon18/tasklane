@@ -54,7 +54,7 @@
           <div class="matrix-controls">
             <div class="size-controls" role="group" aria-label="Car note size">
               <button id="smaller-cars" type="button" class="button neutral" aria-label="Smaller car notes">−</button>
-              <output id="car-size" aria-live="polite">100%</output>
+              <output id="car-size" aria-live="polite">80%</output>
               <button id="larger-cars" type="button" class="button neutral" aria-label="Larger car notes">+</button>
             </div>
             <button type="button" class="button neutral" id="lanes-toggle" aria-controls="matrix-side" aria-expanded="true">Hide side lanes</button>
@@ -217,7 +217,7 @@
   <dialog id="task-editor" aria-labelledby="task-heading">
     <form id="task-form" method="dialog">
       <div class="dialog-heading"><h2 id="task-heading">Add task</h2><button type="button" class="close" data-close="task-editor" aria-label="Close editor">×</button></div>
-      <label>Title<input id="task-title" required maxlength="160" autocomplete="off"></label>
+      <label>Title (25 characters max)<input id="task-title" required maxlength="25" autocomplete="off"></label>
       <label>Notes<textarea id="task-notes" rows="3" maxlength="2000"></textarea></label>
       <div class="fields">
         <label>Lane<select id="task-lane"></select></label>

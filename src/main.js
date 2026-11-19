@@ -11,15 +11,15 @@ const spaces = new Map([...document.querySelectorAll('[data-space]')].map((butto
   [button.dataset.space, button.textContent.trim()]))
 const demoCards = [
   { title: 'Plan this week', lane: 'today', notes: 'Pick three things to finish.' },
-  { title: 'Map out a weekend road trip', lane: 'highway' },
-  { title: 'Photograph a new neighbourhood', lane: 'parking' },
+  { title: 'Plan a weekend road trip', lane: 'highway' },
+  { title: 'Photo walk in a new area', lane: 'parking' },
   { title: 'Coffee beans', lane: 'shopping', shoppingCategory: 'groceries' },
-  { title: 'Confirm a dinner reservation', lane: 'express' },
-  { title: 'Send the signed forms before lunch', lane: 'express' },
+  { title: 'Confirm dinner booking', lane: 'express' },
+  { title: 'Send forms before lunch', lane: 'express' },
   { title: 'Schedule a check-up', lane: 'schedule' },
-  { title: 'Make a short list of weekend hikes', lane: 'schedule' },
-  { title: 'Ask someone to pick up the parcel', lane: 'delegate' },
-  { title: 'Sort the old app downloads', lane: 'skip' },
+  { title: 'Pick a weekend hike', lane: 'schedule' },
+  { title: 'Ask for parcel pickup', lane: 'delegate' },
+  { title: 'Sort old app downloads', lane: 'skip' },
 ]
 const empty = () => ({ cards: [], marks: [], frameworkMarks: {}, wheel: defaultOptions })
 const otherSpaces = [...spaces.keys()].filter((id) => id !== 'home')
