@@ -84,7 +84,8 @@ export function createBoard({ get, update, notify }) {
   const due = byId('task-due')
   const overview = byId('overview')
   const table = byId('task-table')
-  const groups = [[byId('roadmap'), roadmap], [byId('matrix'), matrix],
+  const matrixBoard = byId('matrix')
+  const groups = [[byId('roadmap'), roadmap], [matrixBoard, matrix],
     [byId('matrix-lanes'), roadmap], [byId('swot'), swot]]
   let editing
   let drag = null
@@ -123,8 +124,21 @@ export function createBoard({ get, update, notify }) {
   function remove(card) {
     const position = get().cards.findIndex(({ id }) => id === card.id)
     if (position < 0) return
-    update(({ cards }) => cards.splice(position, 1))
+    update(({ cards }) => {
+      keepMatrixPositions(cards)
+      cards.splice(position, 1)
+    })
     notify('Removed ' + card.title + '.', () => update(({ cards }) => cards.splice(position, 0, card)))
+  }
+
+  function keepMatrixPositions(cards) {
+    const byCard = new Map(cards.map((card) => [card.id, card]))
+    for (const note of matrixBoard.querySelectorAll('.task-card:not([data-positioned])')) {
+      const x = note.style.getPropertyValue('--note-x')
+      const y = note.style.getPropertyValue('--note-y')
+      const card = byCard.get(note.dataset.cardId)
+      if (card && x && y) card.position = { x: Number(x), y: Number(y) }
+    }
   }
 
   function actions(card) {
@@ -225,7 +239,7 @@ export function createBoard({ get, update, notify }) {
       group.replaceChildren(...columns)
       for (const column of columns) column.querySelector('.cards').scrollTop = scroll.get(column.dataset.lane) ?? 0
     }
-    for (const area of byId('matrix').querySelectorAll('.free-notes')) {
+    for (const area of matrixBoard.querySelectorAll('.free-notes')) {
       layOutNotes(area)
       sizeObserver?.observe(area)
     }
@@ -325,6 +339,7 @@ export function createBoard({ get, update, notify }) {
     cancelDrag()
     if (!destination || !origin) return
     update(({ cards }) => {
+      keepMatrixPositions(cards)
       cards.splice(cards.indexOf(card), 1)
       card.lane = destination
       if (position) card.position = position
@@ -363,6 +378,7 @@ export function createBoard({ get, update, notify }) {
     const item = { title: name, notes: notes.value.trim(), due: lanes[lane].swot ? '' : due.value,
       lane, done: !lanes[lane].swot && Boolean(editing?.done) }
     update(({ cards }) => {
+      keepMatrixPositions(cards)
       if (editing) {
         if (editing.lane !== lane) delete editing.position
         Object.assign(editing, item)
@@ -390,7 +406,7 @@ export function createBoard({ get, update, notify }) {
     sizeIndex = Math.max(0, Math.min(sizes.length - 1, sizeIndex + step))
     const size = sizes[sizeIndex]
     matrixLayout.style.setProperty('--car-scale', size / 100)
-    for (const area of byId('matrix').querySelectorAll('.free-notes')) layOutNotes(area)
+    for (const area of matrixBoard.querySelectorAll('.free-notes')) layOutNotes(area)
     byId('car-size').textContent = size + '%'
     smaller.disabled = sizeIndex === 0
     larger.disabled = sizeIndex === sizes.length - 1
