@@ -1,0 +1,28 @@
+{
+  "name": "tasklane",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=./"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dymon18/tasklane.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Dymon18/tasklane/issues"
+  },
+  "homepage": "https://github.com/Dymon18/tasklane#readme",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8"
+  }
+}
