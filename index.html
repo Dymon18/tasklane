@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A desk whiteboard for tasks, plans and decisions.">
   <meta name="theme-color" content="#f6f1e7">
-  <link rel="icon" href="/tasklane-icon.png" type="image/png">
+  <link rel="icon" href="/tasklane-intersection.png" type="image/png">
   <title>TaskLane</title>
 </head>
 <body data-mode="demo">
@@ -13,7 +13,7 @@
     <div class="top-inner">
       <div class="brand-group">
         <button id="ribbon-toggle" class="button neutral ribbon-toggle" type="button" aria-controls="ribbon" aria-expanded="true">Hide ribbon</button>
-        <a class="brand" href="./"><img src="/tasklane-icon.png" width="40" height="40" alt="">TaskLane</a>
+        <a class="brand" href="./"><img src="/tasklane-intersection.png" width="40" height="40" alt="">TaskLane</a>
       </div>
       <div class="account">
         <span id="mode" class="mode">Demo mode</span>
@@ -24,16 +24,27 @@
 
   <div class="layout" id="desk">
     <aside class="sidebar" id="ribbon">
-      <nav class="nav" aria-label="TaskLane pages">
-        <button type="button" data-view="matrix" aria-current="page"><span class="rail-icon" aria-hidden="true">⊞</span><span>Matrix</span></button>
-        <button type="button" data-view="roadmap"><span class="rail-icon" aria-hidden="true">▱</span><span>Lanes</span></button>
-        <button type="button" data-view="tasks"><span class="rail-icon" aria-hidden="true">☷</span><span>Task list</span></button>
-        <button type="button" data-view="whiteboard"><span class="rail-icon" aria-hidden="true">✎</span><span>Whiteboard</span></button>
-        <button type="button" data-view="decide"><span class="rail-icon" aria-hidden="true">◇</span><span>Decisions</span></button>
+      <nav class="nav" aria-label="Workspaces">
+        <button type="button" data-space="home" style="--icon:0" aria-pressed="true"><span class="workspace-icon" aria-hidden="true"></span>Home</button>
+        <button type="button" data-space="study" style="--icon:1" aria-pressed="false"><span class="workspace-icon" aria-hidden="true"></span>Study</button>
+        <button type="button" data-space="work" style="--icon:2" aria-pressed="false"><span class="workspace-icon" aria-hidden="true"></span>Work</button>
+        <button type="button" data-space="gaming" style="--icon:3" aria-pressed="false"><span class="workspace-icon" aria-hidden="true"></span>Gaming</button>
+        <button type="button" data-space="entertainment" style="--icon:4" aria-pressed="false"><span class="workspace-icon" aria-hidden="true"></span>Entertainment</button>
+        <button type="button" data-space="favourite" style="--icon:5" aria-pressed="false"><span class="workspace-icon" aria-hidden="true"></span>Favourite</button>
       </nav>
     </aside>
 
     <main id="workspace">
+      <div class="workspace-toolbar">
+        <span id="active-space">Home</span>
+        <nav class="view-nav" aria-label="Workspace pages">
+          <button type="button" data-view="matrix" aria-current="page">Matrix</button>
+          <button type="button" data-view="roadmap">Lanes</button>
+          <button type="button" data-view="tasks">Task list</button>
+          <button type="button" data-view="whiteboard">Whiteboard</button>
+          <button type="button" data-view="decide">Decisions</button>
+        </nav>
+      </div>
       <section id="panel-matrix" aria-labelledby="matrix-heading">
         <header class="board-header">
           <div>
@@ -88,9 +99,13 @@
       <section id="panel-whiteboard" aria-labelledby="whiteboard-heading" hidden>
         <header class="board-header">
           <h1 id="whiteboard-heading">Whiteboard Frameworks<span>.</span></h1>
-          <label class="template-field">Template<select id="framework"></select></label>
+          <div class="framework-controls">
+            <button class="button neutral" id="framework-back" type="button" hidden>All templates</button>
+            <label class="template-field">Template<select id="framework"><option value="">Choose a template</option></select></label>
+          </div>
         </header>
-        <div class="whiteboard">
+        <div class="framework-gallery" id="framework-gallery" aria-label="Whiteboard templates"></div>
+        <div class="whiteboard" id="whiteboard-editor" hidden>
           <div class="canvas-tools" role="group" aria-label="Whiteboard tools">
             <button type="button" class="button neutral" data-tool="pen" aria-pressed="true">Marker</button>
             <button type="button" class="button neutral" data-tool="erase" aria-pressed="false">Eraser</button>

@@ -6,6 +6,9 @@ export function createWhiteboard({ get, update, notify }) {
   const canvas = byId('canvas')
   const ctx = canvas.getContext('2d')
   const template = byId('framework')
+  const gallery = byId('framework-gallery')
+  const editor = byId('whiteboard-editor')
+  const back = byId('framework-back')
   const zoom = byId('canvas-zoom')
   const layer = byId('template-canvas')
   const scroller = canvas.closest('.canvas-scroller')
@@ -23,6 +26,25 @@ export function createWhiteboard({ get, update, notify }) {
   let frame = 0
 
   for (const [id, name] of Object.entries(frameworks)) template.add(new Option(name, id))
+  for (const [id, name] of Object.entries(frameworks)) {
+    const tile = document.createElement('button')
+    tile.className = 'framework-tile'
+    tile.type = 'button'
+    const thumbnail = document.createElement('canvas')
+    thumbnail.width = 360
+    thumbnail.height = 210
+    thumbnail.setAttribute('aria-hidden', 'true')
+    drawTemplate(thumbnail, id)
+    const label = document.createElement('span')
+    label.textContent = name
+    tile.append(thumbnail, label)
+    tile.addEventListener('click', () => {
+      select(id)
+      back.focus()
+    })
+    gallery.append(tile)
+  }
+
   function marksFor(state, id = template.value) {
     return id === 'blank' ? state.marks : state.frameworkMarks[id] ?? []
   }
@@ -36,15 +58,44 @@ export function createWhiteboard({ get, update, notify }) {
   function renderTemplate() {
     const id = template.value
     byId('panel-whiteboard').dataset.template = id
+    if (!id) return
     canvas.setAttribute('aria-label', `${frameworks[id]} drawing canvas`)
     drawTemplate(layer, id)
     draw()
   }
-  template.addEventListener('change', () => {
+  function resetInteraction() {
     active = null
     pan = null
+    textPoint = null
     if (textEditor.open) textEditor.close()
+  }
+
+  function showGallery() {
+    resetInteraction()
+    template.value = ''
+    gallery.hidden = false
+    editor.hidden = true
+    back.hidden = true
     renderTemplate()
+  }
+
+  function select(id) {
+    if (!Object.hasOwn(frameworks, id)) return
+    resetInteraction()
+    template.value = id
+    gallery.hidden = true
+    editor.hidden = false
+    back.hidden = false
+    renderTemplate()
+  }
+
+  template.addEventListener('change', () => {
+    if (template.value) select(template.value)
+    else showGallery()
+  })
+  back.addEventListener('click', () => {
+    showGallery()
+    gallery.querySelector('button').focus()
   })
   zoom.addEventListener('change', () => byId('canvas-stack').style.setProperty('--board-width', zoom.value + '%'))
 
@@ -207,16 +258,10 @@ export function createWhiteboard({ get, update, notify }) {
   })
 
   return {
-    select(id) {
-      if (!Object.hasOwn(frameworks, id)) return
-      template.value = id
-      renderTemplate()
-    },
+    select,
+    showGallery,
     reset() {
-      active = null
-      pan = null
-      textPoint = null
-      if (textEditor.open) textEditor.close()
+      resetInteraction()
       renderTemplate()
     },
   }

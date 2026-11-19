@@ -19,7 +19,8 @@ const colors = ['#f4dbd3', '#d9ecf0', '#f4e7c6', '#dfead3', '#ebe0f1']
 export function drawTemplate(canvas, id) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.setTransform?.(canvas.width / 1200, 0, 0, canvas.height / 700, 0, 0)
+  ctx.clearRect(0, 0, 1200, 700)
   ctx.lineWidth = 2
   ctx.strokeStyle = lineColor
 

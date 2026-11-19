@@ -7,6 +7,8 @@ import { createSync } from './sync.js'
 
 const byId = (id) => document.getElementById(id)
 const views = new Set(['matrix', 'roadmap', 'tasks', 'whiteboard', 'decide'])
+const spaces = new Map([...document.querySelectorAll('[data-space]')].map((button) =>
+  [button.dataset.space, button.textContent.trim()]))
 const demoCards = [
   { title: 'Plan this week', lane: 'today', notes: 'Pick three things to finish.' },
   { title: 'Map out a weekend road trip', lane: 'highway' },
@@ -20,12 +22,16 @@ const demoCards = [
   { title: 'Sort the old app downloads', lane: 'skip' },
 ]
 const empty = () => ({ cards: [], marks: [], frameworkMarks: {}, wheel: defaultOptions })
-const demo = () => ({ ...empty(), cards: demoCards.map((card, index) => ({
+const otherSpaces = [...spaces.keys()].filter((id) => id !== 'home')
+const restoreSpaces = (data) => Object.fromEntries(otherSpaces.map((id) => [id, restoreSpace(data?.[id])]))
+const demo = () => ({ ...empty(), spaces: restoreSpaces(), cards: demoCards.map((card, index) => ({
   id: 'demo-' + index, notes: '', due: '', done: false, ...card,
 })) })
-const get = () => state
+let activeSpace = 'home'
+let activeView = 'matrix'
+const get = () => activeSpace === 'home' ? state : state.spaces[activeSpace]
 
-function restore(data) {
+function restoreSpace(data) {
   const state = empty()
   if (!data || typeof data !== 'object') return state
   const asText = (value, max) => typeof value === 'string' ? value.slice(0, max) : ''
@@ -38,6 +44,7 @@ function restore(data) {
       done: Boolean(card.done),
       lane: card.lane,
       due: /^\d{4}-\d{2}-\d{2}$/.test(card.due) && !Number.isNaN(Date.parse(card.due)) ? card.due : '',
+      ...(validPosition(card.position) ? { position: { x: card.position.x, y: card.position.y } } : {}),
     }))
   }
   const isPoint = (point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite)
@@ -56,6 +63,16 @@ function restore(data) {
   }
   if (typeof data.wheel === 'string') state.wheel = data.wheel.slice(0, 500)
   return state
+}
+
+function validPosition(position) {
+  return position && [position.x, position.y].every((value) => Number.isFinite(value) && value >= 0 && value <= 1)
+}
+
+function restore(data) {
+  const home = restoreSpace(data)
+  home.spaces = restoreSpaces(data?.spaces)
+  return home
 }
 
 let state = demo()
@@ -77,13 +94,13 @@ function changeMode(isOwner, nextState) {
 }
 
 const sync = createSync({
-  get,
+  get: () => state,
   enterOwner: (saved) => changeMode(true, saved),
   enterDemo: () => changeMode(false),
 })
 
 function update(change, renderBoard = true) {
-  change(state)
+  change(get())
   if (renderBoard) board.render()
   sync.changed()
 }
@@ -101,6 +118,7 @@ function dismiss() {
 }
 
 function showView(view) {
+  activeView = view
   for (const name of views) {
     const active = name === view
     byId('panel-' + name).hidden = !active
@@ -108,12 +126,38 @@ function showView(view) {
     if (active) tab.setAttribute('aria-current', 'page')
     else tab.removeAttribute('aria-current')
   }
+  if (view === 'whiteboard') whiteboard.showGallery()
 }
 
 function readView() {
-  const view = location.hash.slice(1)
+  const parts = location.hash.slice(1).split('/')
+  const hasSpace = spaces.has(parts[0])
+  const space = hasSpace ? parts[0] : 'home'
+  const view = hasSpace ? parts[1] : parts[0]
+  showSpace(space)
   showView(view === 'swot' ? 'whiteboard' : views.has(view) ? view : 'matrix')
   if (view === 'swot') whiteboard.select('swot')
+}
+
+function showSpace(space) {
+  if (space === activeSpace) return
+  board.reset()
+  dismiss()
+  activeSpace = space
+  byId('active-space').textContent = spaces.get(space)
+  for (const button of document.querySelectorAll('[data-space]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.space === space))
+  }
+  board.render()
+  whiteboard.showGallery()
+  tools.reset()
+}
+
+function rememberPage() {
+  const url = new URL(location.href)
+  url.hash = [activeSpace === 'home' ? '' : activeSpace, activeView === 'matrix' ? '' : activeView]
+    .filter(Boolean).join('/')
+  history.replaceState(history.state, '', url)
 }
 
 const ribbon = byId('ribbon')
@@ -128,9 +172,13 @@ ribbonToggle.addEventListener('click', () => {
 for (const tab of document.querySelectorAll('[data-view]')) {
   tab.addEventListener('click', () => {
     showView(tab.dataset.view)
-    const url = new URL(location.href)
-    url.hash = tab.dataset.view === 'matrix' ? '' : tab.dataset.view
-    history.replaceState(history.state, '', url)
+    rememberPage()
+  })
+}
+for (const button of document.querySelectorAll('[data-space]')) {
+  button.addEventListener('click', () => {
+    showSpace(button.dataset.space)
+    rememberPage()
   })
 }
 window.addEventListener('hashchange', readView)
