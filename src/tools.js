@@ -3,143 +3,8 @@ const defaultOptions = 'Take a walk\nRead a chapter\nStart the next task'
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const wheelColors = ['#f6c9ba', '#b8d7e0', '#f5dc9d', '#cfdfba', '#dacbec', '#efd1a8']
 
-export function createTools({ get, update, notify }) {
-  const canvas = byId('canvas')
-  const ctx = canvas.getContext('2d')
-  const textEditor = byId('text-editor')
-  const textInput = byId('canvas-text')
-  const ink = byId('ink')
-  const size = byId('ink-size')
-  const toolButtons = document.querySelectorAll('[data-tool]')
-  const undo = byId('canvas-undo')
-  const clear = byId('canvas-clear')
-  let tool = 'pen'
-  let active = null
-  let textPoint = null
-  let frame = 0
-
-  function point(event) {
-    const rect = canvas.getBoundingClientRect()
-    const within = (value, length) => Math.max(0, Math.min(length, Math.round(value)))
-    return [within((event.clientX - rect.left) * canvas.width / rect.width, canvas.width),
-      within((event.clientY - rect.top) * canvas.height / rect.height, canvas.height)]
-  }
-
-  function paint(mark) {
-    ctx.fillStyle = ctx.strokeStyle = mark.color
-    if (mark.kind === 'text') {
-      ctx.font = `${Math.max(14, mark.size * 3)}px system-ui, sans-serif`
-      ctx.textBaseline = 'middle'
-      ctx.fillText(mark.text, ...mark.point, Math.max(1, canvas.width - mark.point[0]))
-      return
-    }
-    const [first, ...rest] = mark.points
-    ctx.lineWidth = mark.size
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.beginPath()
-    if (!rest.length) {
-      ctx.arc(...first, mark.size / 2, 0, Math.PI * 2)
-      ctx.fill()
-      return
-    }
-    ctx.moveTo(...first)
-    for (const next of rest) ctx.lineTo(...next)
-    ctx.stroke()
-  }
-
-  function draw() {
-    frame = 0
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    for (const mark of get().marks) paint(mark)
-    if (active) paint(active.mark)
-    undo.disabled = clear.disabled = get().marks.length === 0
-  }
-
-  function redraw() {
-    if (!frame) frame = requestAnimationFrame(draw)
-  }
-
-  function add(mark) {
-    const points = get().marks.reduce((count, entry) => count + (entry.points?.length ?? 1), 0)
-    if (get().marks.length >= 1200 || points + (mark.points?.length ?? 1) > 24000) {
-      notify('The whiteboard is full. Undo or clear some marks to keep drawing.')
-      redraw()
-      return
-    }
-    update(({ marks }) => marks.push(mark), false)
-    redraw()
-  }
-
-  for (const button of toolButtons) button.addEventListener('click', () => {
-    tool = button.dataset.tool
-    for (const control of toolButtons) control.setAttribute('aria-pressed', String(control === button))
-    byId('canvas-hint').textContent = tool === 'text' ? 'Click the board where you want to place text.'
-      : tool === 'line' ? 'Drag between two points to draw a straight line.' : 'Drag across the board to draw.'
-  })
-  canvas.addEventListener('pointerdown', (event) => {
-    if (!ctx || active || !event.isPrimary || event.button !== 0) return
-    const start = point(event)
-    const style = { color: ink.value, size: Number(size.value) }
-    if (tool === 'text') {
-      textPoint = { kind: 'text', point: start, ...style }
-      textInput.value = ''
-      textEditor.showModal()
-      textInput.focus()
-      return
-    }
-    active = { pointer: event.pointerId, mark: { kind: tool, points: [start], ...style } }
-    canvas.setPointerCapture(event.pointerId)
-    redraw()
-  })
-  function extend(event) {
-    const mark = active.mark
-    const next = point(event)
-    if (mark.kind === 'line') mark.points[1] = next
-    else {
-      const [x, y] = mark.points.at(-1)
-      if (Math.hypot(next[0] - x, next[1] - y) >= 2 && mark.points.length < 1600) mark.points.push(next)
-    }
-  }
-  canvas.addEventListener('pointermove', (event) => {
-    if (event.pointerId !== active?.pointer) return
-    extend(event)
-    redraw()
-  })
-  canvas.addEventListener('pointerup', (event) => {
-    if (event.pointerId !== active?.pointer) return
-    extend(event)
-    const { mark } = active
-    active = null
-    add(mark)
-  })
-  for (const type of ['pointercancel', 'lostpointercapture']) canvas.addEventListener(type, (event) => {
-    if (event.pointerId !== active?.pointer) return
-    active = null
-    redraw()
-  })
-  byId('text-form').addEventListener('submit', (event) => {
-    event.preventDefault()
-    if (!textPoint || !textInput.value.trim()) return
-    add({ ...textPoint, text: textInput.value.trim() })
-    textEditor.close()
-    textPoint = null
-  })
-  undo.addEventListener('click', () => {
-    update(({ marks }) => marks.pop(), false)
-    redraw()
-  })
-  clear.addEventListener('click', () => {
-    const previous = get().marks
-    update((state) => { state.marks = [] }, false)
-    notify('Whiteboard cleared.', () => {
-      update((state) => { state.marks = [...previous, ...state.marks] }, false)
-      redraw()
-    })
-    redraw()
-  })
-
+export function createTools({ get, update }) {
+  const resetExtraTools = createExtraTools()
   const choices = byId('wheel-options')
   const wheel = byId('wheel')
   const spin = byId('wheel-spin')
@@ -209,10 +74,6 @@ export function createTools({ get, update, notify }) {
 
   return {
     reset() {
-      active = null
-      textPoint = null
-      if (textEditor.open) textEditor.close()
-      draw()
       clearTimeout(wheelTimer)
       clearTimeout(coinTimer)
       choices.disabled = spin.disabled = flip.disabled = false
@@ -224,8 +85,206 @@ export function createTools({ get, update, notify }) {
       coin.classList.remove('is-flipping')
       coin.textContent = 'H'
       coinResult.textContent = 'Heads or tails?'
+      resetExtraTools()
     },
   }
 }
 
 export { defaultOptions }
+
+function createExtraTools() {
+  const diceForm = byId('dice-form')
+  const randomForm = byId('random-form')
+  const timerForm = byId('timer-form')
+  const eitherForm = byId('either-form')
+  const bracketForm = byId('bracket-form')
+  const diceFaces = byId('dice-faces')
+  const diceResult = byId('dice-result')
+  const randomResult = byId('random-result')
+  const eitherResult = byId('either-result')
+  const draw = (min, max) => min + Math.floor(Math.random() * (max - min + 1))
+
+  diceForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const count = Number(byId('dice-count').value)
+    const sides = Number(byId('dice-sides').value)
+    const rolls = Array.from({ length: count }, () => draw(1, sides))
+    diceFaces.replaceChildren(...rolls.map((roll) => {
+      const die = document.createElement('span')
+      die.className = 'die'
+      die.textContent = roll
+      return die
+    }))
+    diceResult.textContent = `Rolled ${rolls.join(', ')}. Total ${rolls.reduce((sum, roll) => sum + roll, 0)}.`
+  })
+  randomForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const min = Number(byId('random-min').value)
+    const max = Number(byId('random-max').value)
+    randomResult.textContent = min <= max ? String(draw(min, max))
+      : 'Set the minimum to a number less than or equal to the maximum.'
+  })
+  eitherForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const picks = ['either-a', 'either-b'].map((id) => byId(id).value.trim())
+    eitherResult.textContent = picks.every(Boolean) ? picks[draw(0, 1)] : 'Enter two options first.'
+  })
+
+  const minute = byId('timer-min')
+  const second = byId('timer-sec')
+  const start = byId('timer-start')
+  const pause = byId('timer-pause')
+  const clock = byId('timer-clock')
+  const timerResult = byId('timer-result')
+  let remaining = null
+  let end = null
+  let ticker
+  const duration = () => (Number(minute.value) * 60 + Number(second.value)) * 1000
+
+  function showTime(milliseconds) {
+    const seconds = Math.ceil(Math.max(0, milliseconds) / 1000)
+    clock.textContent = [Math.floor(seconds / 60), seconds % 60].map((part) => String(part).padStart(2, '0')).join(':')
+  }
+  function showTimerState() {
+    start.disabled = Boolean(end)
+    pause.disabled = !end
+    start.textContent = remaining === null ? 'Start' : 'Resume'
+    minute.disabled = second.disabled = Boolean(end)
+  }
+  function resetTimer() {
+    clearInterval(ticker)
+    end = null
+    remaining = null
+    showTime(duration())
+    showTimerState()
+    timerResult.textContent = ''
+  }
+  function tick() {
+    const timeLeft = end - Date.now()
+    showTime(timeLeft)
+    if (timeLeft > 0) return
+    clearInterval(ticker)
+    end = null
+    remaining = null
+    showTimerState()
+    timerResult.textContent = 'Time’s up!'
+  }
+  timerForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    if (end) return
+    const value = remaining ?? duration()
+    if (!value) {
+      timerResult.textContent = 'Enter a countdown longer than zero seconds.'
+      return
+    }
+    end = Date.now() + value
+    showTime(value)
+    showTimerState()
+    timerResult.textContent = 'Countdown running.'
+    ticker = setInterval(tick, 200)
+  })
+  pause.addEventListener('click', () => {
+    if (!end) return
+    if (end <= Date.now()) {
+      tick()
+      return
+    }
+    remaining = end - Date.now()
+    end = null
+    clearInterval(ticker)
+    showTime(remaining)
+    showTimerState()
+    timerResult.textContent = 'Countdown paused.'
+  })
+  byId('timer-reset').addEventListener('click', resetTimer)
+  for (const input of [minute, second]) input.addEventListener('input', resetTimer)
+
+  const entrants = byId('bracket-options')
+  const bracket = byId('bracket-rounds')
+  const bracketResult = byId('bracket-result')
+  let names = []
+  const picks = new Map()
+
+  function renderBracket(bracketFocus) {
+    const size = 2 ** Math.ceil(Math.log2(names.length))
+    let slots = Array.from({ length: size / 2 }, (_, index) => [names[index], names[index + size / 2]])
+    bracket.replaceChildren()
+    let focus
+    for (let round = 0; slots.length; round++) {
+      const column = document.createElement('section')
+      column.className = 'bracket-round'
+      const heading = document.createElement('h3')
+      heading.textContent = slots.length === 1 ? 'Final' : 'Round ' + (round + 1)
+      column.append(heading)
+      const winners = slots.map(([left, right], index) => {
+        const match = document.createElement('div')
+        match.className = 'bracket-match'
+        column.append(match)
+        const id = round + '-' + index
+        if (round === 0 && !right) {
+          const bye = document.createElement('p')
+          bye.textContent = left + ' advances with a bye.'
+          match.append(bye)
+          return left
+        }
+        if (!left || !right) {
+          picks.delete(id)
+          const upcoming = document.createElement('p')
+          upcoming.textContent = left || right
+            ? (left || right) + ' awaits an opponent.'
+            : 'Awaiting winners.'
+          match.append(upcoming)
+          return null
+        }
+        const previous = picks.get(id)
+        const selected = previous?.left === left && previous.right === right ? previous.name : null
+        if (!selected) picks.delete(id)
+        for (const name of [left, right]) {
+          const choose = document.createElement('button')
+          choose.type = 'button'
+          choose.className = 'button neutral'
+          choose.textContent = name
+          choose.setAttribute('aria-label', 'Advance ' + name)
+          choose.setAttribute('aria-pressed', String(selected === name))
+          choose.addEventListener('click', () => {
+            picks.set(id, { left, right, name })
+            renderBracket({ id, name })
+          })
+          match.append(choose)
+          if (bracketFocus?.id === id && bracketFocus.name === name) focus = choose
+        }
+        return selected
+      })
+      bracket.append(column)
+      if (winners.length === 1) {
+        bracketResult.textContent = winners[0] ? winners[0] + ' wins the tournament.'
+          : 'Choose a winner from each match.'
+        break
+      }
+      slots = Array.from({ length: winners.length / 2 }, (_, index) => winners.slice(index * 2, index * 2 + 2))
+    }
+    focus?.focus()
+  }
+
+  bracketForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const entered = entrants.value.split('\n').map((name) => name.trim()).filter(Boolean)
+    if (entered.length < 2 || entered.length > 16 || new Set(entered.map((name) => name.toLowerCase())).size !== entered.length) {
+      bracketResult.textContent = 'Enter 2–16 different names, one per line.'
+      return
+    }
+    names = entered
+    picks.clear()
+    renderBracket()
+  })
+
+  return () => {
+    for (const form of [diceForm, randomForm, timerForm, eitherForm, bracketForm]) form.reset()
+    for (const result of [diceResult, randomResult, eitherResult, bracketResult]) result.textContent = ''
+    resetTimer()
+    diceFaces.replaceChildren()
+    bracket.replaceChildren()
+    names = []
+    picks.clear()
+  }
+}

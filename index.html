@@ -3,15 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="TaskLane is a road-themed planning dashboard for tasks, goals, and ideas.">
-  <meta name="theme-color" content="#f8f7ef">
+  <meta name="description" content="A desk whiteboard for tasks, plans and decisions.">
+  <meta name="theme-color" content="#f6f1e7">
   <link rel="icon" href="/tasklane-icon.png" type="image/png">
   <title>TaskLane</title>
 </head>
 <body data-mode="demo">
   <header class="topbar">
     <div class="top-inner">
-      <a class="brand" href="./"><span class="brand-icon" aria-hidden="true"><i></i></span>TaskLane</a>
+      <div class="brand-group">
+        <button id="ribbon-toggle" class="button neutral ribbon-toggle" type="button" aria-controls="ribbon" aria-expanded="true">Hide ribbon</button>
+        <a class="brand" href="./"><img src="/tasklane-icon.png" width="40" height="40" alt="">TaskLane</a>
+      </div>
       <div class="account">
         <span id="mode" class="mode">Demo mode</span>
         <button id="account" class="button neutral" type="button">Dymon login</button>
@@ -19,42 +22,62 @@
     </div>
   </header>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <nav class="nav" aria-label="TaskLane tools">
-        <button type="button" data-view="roadmap" aria-current="page"><span aria-hidden="true">⌘</span>RoadMap</button>
-        <button type="button" data-view="matrix"><span aria-hidden="true">▦</span>Priority Matrix</button>
-        <button type="button" data-view="swot"><span aria-hidden="true">✦</span>SWOT Analysis</button>
-        <button type="button" data-view="whiteboard"><span aria-hidden="true">✎</span>Whiteboard</button>
-        <button type="button" data-view="decide"><span aria-hidden="true">◉</span>Decision Tools</button>
+  <div class="layout" id="desk">
+    <aside class="sidebar" id="ribbon">
+      <nav class="nav" aria-label="TaskLane pages">
+        <button type="button" data-view="matrix" aria-current="page"><span class="rail-icon" aria-hidden="true">⊞</span><span>Matrix</span></button>
+        <button type="button" data-view="roadmap"><span class="rail-icon" aria-hidden="true">▱</span><span>Lanes</span></button>
+        <button type="button" data-view="tasks"><span class="rail-icon" aria-hidden="true">☷</span><span>Task list</span></button>
+        <button type="button" data-view="whiteboard"><span class="rail-icon" aria-hidden="true">✎</span><span>Whiteboard</span></button>
+        <button type="button" data-view="decide"><span class="rail-icon" aria-hidden="true">◇</span><span>Decisions</span></button>
       </nav>
-      <p id="mode-note">Demo edits reset when you refresh or close the tab.</p>
-      <a class="home-link" href="https://dymon18.github.io/">Dymon18 home</a>
-      <div class="sync">
-        <p id="sync-status" role="status"></p>
-        <button id="retry-sync" type="button" class="button neutral" hidden>Retry save</button>
-      </div>
     </aside>
 
     <main id="workspace">
-      <section id="panel-roadmap" aria-labelledby="roadmap-heading">
-        <header class="hero">
+      <section id="panel-matrix" aria-labelledby="matrix-heading">
+        <header class="board-header">
           <div>
-            <h1 id="roadmap-heading">RoadMap<span>.</span></h1>
-            <p>Get ideas, tasks, and long-term goals into the right lane.</p>
-            <button type="button" class="button primary" id="new-task">+ Add task</button>
+            <h1 id="matrix-heading">Eisenhower Matrix<span>.</span></h1>
+            <p>Drag a car to move it. Click it to add details.</p>
           </div>
-          <img class="road-art" src="/tasklane-map.webp" alt="" width="1200" height="675">
+          <div class="matrix-controls">
+            <div class="size-controls" role="group" aria-label="Car note size">
+              <button id="smaller-cars" type="button" class="button neutral" aria-label="Smaller car notes">−</button>
+              <output id="car-size" aria-live="polite">100%</output>
+              <button id="larger-cars" type="button" class="button neutral" aria-label="Larger car notes">+</button>
+            </div>
+            <button type="button" class="button neutral" id="lanes-toggle" aria-controls="matrix-side" aria-expanded="true">Hide side lanes</button>
+            <button type="button" class="button primary" data-add-lane="express">+ Add task</button>
+          </div>
+        </header>
+        <div class="matrix-layout" id="matrix-layout">
+          <div class="matrix-island">
+            <div class="axis-x" aria-label="Urgency"><span>Urgent</span><span>Not urgent</span></div>
+            <div class="axis-y" aria-label="Importance"><span>Important</span><span>Not important</span></div>
+            <div class="matrix-roads">
+              <div class="board matrix" id="matrix"></div>
+            </div>
+          </div>
+          <aside id="matrix-side" aria-label="Side lanes">
+            <div class="board side-lanes" id="matrix-lanes"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="panel-roadmap" aria-labelledby="roadmap-heading" hidden>
+        <header class="board-header"><div><h1 id="roadmap-heading">Task Lanes<span>.</span></h1><p>Park an idea, plan a goal, or check off the day’s errands.</p></div>
+          <button type="button" class="button primary" id="new-task">+ Add task</button>
+        </header>
+        <div class="board roadmap" id="roadmap"></div>
+      </section>
+
+      <section id="panel-tasks" aria-labelledby="tasks-heading" hidden>
+        <header class="board-header"><h1 id="tasks-heading">Task List<span>.</span></h1>
+          <button type="button" class="button primary" data-add-lane="today">+ Add task</button>
         </header>
         <div class="overview" id="overview"></div>
-        <div class="board-controls">
-          <h2>Task lanes</h2>
-          <button class="button neutral" type="button" id="table-toggle" aria-pressed="false" aria-controls="task-table">Show task table</button>
-        </div>
-        <p class="board-hint" id="lane-hint">Drag a car to move a task, or change its lane in the editor.</p>
-        <div class="board roadmap" id="roadmap"></div>
-        <div class="task-table" id="task-table" hidden>
-          <table aria-label="RoadMap tasks">
+        <div class="task-table" id="task-table">
+          <table aria-label="All tasks">
             <thead><tr><th scope="col">Task</th><th scope="col">Lane</th><th scope="col">Due</th><th scope="col">Actions</th></tr></thead>
             <tbody></tbody>
           </table>
@@ -62,66 +85,111 @@
         </div>
       </section>
 
-      <section id="panel-matrix" aria-labelledby="matrix-heading" hidden>
-        <header class="view-heading">
-          <div><h1 id="matrix-heading">Priority Matrix<span>.</span></h1><p>Use the Eisenhower matrix to sort tasks by urgency and importance.</p></div>
-          <button type="button" class="button primary" data-add-lane="express">+ Add task</button>
-        </header>
-        <div class="board matrix" id="matrix"></div>
-        <div class="board parking" id="matrix-parking"></div>
-      </section>
-
-      <section id="panel-swot" aria-labelledby="swot-heading" hidden>
-        <header class="view-heading">
-          <div><h1 id="swot-heading">SWOT Analysis<span>.</span></h1><p>Map strengths, weaknesses, opportunities, and threats.</p></div>
-          <button type="button" class="button primary" data-add-lane="strengths">+ Add note</button>
-        </header>
-        <div class="board swot" id="swot"></div>
-      </section>
-
       <section id="panel-whiteboard" aria-labelledby="whiteboard-heading" hidden>
-        <header class="view-heading">
-          <div><h1 id="whiteboard-heading">Whiteboard<span>.</span></h1><p>Sketch a plan or jot down an idea.</p></div>
+        <header class="board-header">
+          <h1 id="whiteboard-heading">Whiteboard Frameworks<span>.</span></h1>
+          <label class="template-field">Template<select id="framework"></select></label>
         </header>
         <div class="whiteboard">
           <div class="canvas-tools" role="group" aria-label="Whiteboard tools">
-            <button type="button" class="button neutral" data-tool="pen" aria-pressed="true">Pen</button>
+            <button type="button" class="button neutral" data-tool="pen" aria-pressed="true">Marker</button>
+            <button type="button" class="button neutral" data-tool="erase" aria-pressed="false">Eraser</button>
             <button type="button" class="button neutral" data-tool="line" aria-pressed="false">Ruler</button>
             <button type="button" class="button neutral" data-tool="text" aria-pressed="false">Text</button>
+            <button type="button" class="button neutral" data-tool="pan" aria-pressed="false">Pan</button>
             <label>Color <input id="ink" type="color" value="#34475a"></label>
             <label>Size <input id="ink-size" type="range" min="2" max="32" value="6"></label>
             <button type="button" class="button neutral" id="canvas-undo">Undo</button>
             <button type="button" class="button neutral" id="canvas-clear">Clear</button>
+            <label class="canvas-zoom">Zoom<select id="canvas-zoom"><option value="75">75%</option><option value="100" selected>Fit</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option></select></label>
           </div>
           <p id="canvas-hint">Drag across the board to draw.</p>
-          <canvas id="canvas" width="1200" height="700" aria-label="Drawing canvas"></canvas>
+          <div class="canvas-scroller" tabindex="0" aria-label="Scrollable whiteboard">
+            <div class="canvas-stack" id="canvas-stack">
+              <canvas id="template-canvas" width="1200" height="700" aria-hidden="true"></canvas>
+              <canvas id="canvas" width="1200" height="700" aria-label="Drawing canvas" tabindex="0"></canvas>
+            </div>
+          </div>
         </div>
+        <details id="saved-swot" hidden><summary>Saved SWOT notes</summary><div class="board swot" id="swot"></div></details>
       </section>
 
       <section id="panel-decide" aria-labelledby="decide-heading" hidden>
-        <header class="view-heading">
-          <div><h1 id="decide-heading">Decision Tools<span>.</span></h1><p>Spin through your options or leave a yes-or-no call to a coin.</p></div>
-        </header>
+        <header class="board-header"><h1 id="decide-heading">Decision Tools<span>.</span></h1></header>
         <div class="decision-grid">
           <article class="tool-card wheel-card">
             <h2>Decision wheel</h2>
-            <label>Options <textarea id="wheel-options" rows="5" maxlength="500" placeholder="One option per line">Take a walk
-Read a chapter
-Start the next task</textarea></label>
+            <label>Options <textarea id="wheel-options" rows="3" maxlength="500" placeholder="One option per line"></textarea></label>
             <div class="wheel-wrap"><div id="wheel" class="wheel" aria-hidden="true"></div></div>
             <button type="button" id="wheel-spin" class="button primary">Spin wheel</button>
-            <p id="wheel-result" class="result" role="status">Add 2–12 options, one per line.</p>
+            <p id="wheel-result" class="result" role="status"></p>
           </article>
           <article class="tool-card coin-card">
             <h2>Coin flip</h2>
             <div class="coin" id="coin" aria-hidden="true">H</div>
             <button type="button" id="coin-flip" class="button primary">Flip coin</button>
-            <p id="coin-result" class="result" role="status">Heads or tails?</p>
+            <p id="coin-result" class="result" role="status"></p>
+          </article>
+          <article class="tool-card">
+            <h2>Dice rolls</h2>
+            <form id="dice-form">
+              <div class="fields"><label>Dice <input id="dice-count" type="number" min="1" max="6" value="2" required></label>
+                <label>Sides <select id="dice-sides"><option>4</option><option selected>6</option><option>8</option><option>10</option><option>12</option><option>20</option></select></label></div>
+              <button class="button primary" type="submit">Roll dice</button>
+            </form>
+            <div id="dice-faces" class="dice-faces" aria-hidden="true"></div>
+            <p id="dice-result" class="result" role="status"></p>
+          </article>
+          <article class="tool-card">
+            <h2>Random number</h2>
+            <form id="random-form">
+              <div class="fields"><label>Minimum <input id="random-min" type="number" min="-1000000000" max="1000000000" value="1" required></label>
+                <label>Maximum <input id="random-max" type="number" min="-1000000000" max="1000000000" value="100" required></label></div>
+              <button class="button primary" type="submit">Pick a number</button>
+            </form>
+            <p id="random-result" class="result" role="status"></p>
+          </article>
+          <article class="tool-card">
+            <h2>Countdown timer</h2>
+            <form id="timer-form">
+              <div class="fields"><label>Minutes <input id="timer-min" type="number" min="0" max="599" value="5" required></label>
+                <label>Seconds <input id="timer-sec" type="number" min="0" max="59" value="0" required></label></div>
+              <p id="timer-clock" role="timer">05:00</p>
+              <div class="tool-actions">
+                <button id="timer-start" class="button primary" type="submit">Start</button>
+                <button id="timer-pause" class="button neutral" type="button" disabled>Pause</button>
+                <button id="timer-reset" class="button neutral" type="button">Reset</button>
+              </div>
+            </form>
+            <p id="timer-result" class="result" role="status"></p>
+          </article>
+          <article class="tool-card">
+            <h2>This or that</h2>
+            <form id="either-form">
+              <div class="fields"><label>This <input id="either-a" maxlength="80" required></label>
+                <label>That <input id="either-b" maxlength="80" required></label></div>
+              <button class="button primary" type="submit">Pick one</button>
+            </form>
+            <p id="either-result" class="result" role="status"></p>
+          </article>
+          <article class="tool-card bracket-card">
+            <h2>Tournament bracket</h2>
+            <form id="bracket-form">
+              <label>Entrants <textarea id="bracket-options" rows="4" maxlength="1200" placeholder="2–16 entrants, one per line" required></textarea></label>
+              <button class="button primary" type="submit">Make bracket</button>
+            </form>
+            <p id="bracket-result" class="result" role="status"></p>
+            <div id="bracket-rounds" class="bracket-rounds"></div>
           </article>
         </div>
       </section>
     </main>
   </div>
+  <footer class="desk-footer">
+    <span id="mode-note">Demo edits reset when you refresh or close the tab.</span>
+    <div class="sync"><span id="sync-status" role="status"></span><button id="retry-sync" class="button neutral" type="button" hidden>Retry save</button></div>
+    <a href="https://dymon18.github.io/">Go back to dymon18 home</a>
+  </footer>
 
   <div id="notice" class="notice" hidden>
     <p id="status" role="status"></p>

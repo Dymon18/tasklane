@@ -14,20 +14,20 @@ const button = (label, className, onClick, accessibleName = label) => {
 }
 
 export const lanes = {
-  today: { name: 'To-do Lane', hint: 'Tasks on your list', color: '#d9e9f4', car: '#6c9bc0' },
-  highway: { name: 'Goal Highway', hint: 'Long-term goals and milestones', color: '#e7dff1', car: '#a78ab8' },
-  parking: { name: 'Parking Lot', hint: 'Ideas to come back to', color: '#e2ebcf', car: '#91aa68' },
-  shopping: { name: 'Shopping List', hint: 'Things to pick up', color: '#f8e9b9', car: '#c6a454' },
-  express: { name: 'Express Lane', hint: 'Urgent and important · Do now', color: '#f6d3c8', car: '#d38176' },
-  schedule: { name: 'Scenic Route', hint: 'Important, not urgent · Schedule', color: '#d4e8ea', car: '#77a8b8' },
-  delegate: { name: 'Carpool Lane', hint: 'Urgent, not important · Delegate', color: '#f9e1c5', car: '#c99365' },
-  skip: { name: 'Off-Ramp', hint: 'Neither urgent nor important · Drop', color: '#dce9d0', car: '#87a56f' },
+  today: { name: 'To-do Lane', hint: 'Day-to-day tasks', color: '#ecf0f8', car: '#d5e3f6', symbol: '≡' },
+  highway: { name: 'Goal Highway', hint: 'Long-term goals', color: '#f0eaf7', car: '#e8d8f4', symbol: '⇅' },
+  parking: { name: 'Parking Lot', hint: 'Ideas to revisit', color: '#edf1e4', car: '#e1ebcd', symbol: 'P' },
+  shopping: { name: 'Shopping Cart', hint: 'Things to pick up', color: '#f8efdb', car: '#f8e4ae', symbol: '🛒' },
+  express: { name: 'Express Lane', heading: 'Urgent + important', hint: 'Do now', color: '#fbede7', car: '#f7cfc0' },
+  schedule: { name: 'Scenic Route', heading: 'Not urgent + important', hint: 'Schedule', color: '#e7f2f3', car: '#c5e5e7' },
+  delegate: { name: 'Carpool Lane', heading: 'Urgent + not important', hint: 'Delegate', color: '#f7eedc', car: '#f7dfab' },
+  skip: { name: 'Off-Ramp', heading: 'Not urgent + not important', hint: 'Let go', color: '#edf1e5', car: '#dfebcd' },
   strengths: { name: 'Strengths', hint: 'What’s working?', color: '#bfdae0', car: '#79a6b6', swot: true },
   weaknesses: { name: 'Weaknesses', hint: 'Where can you improve?', color: '#f9d4ad', car: '#cd9a65', swot: true },
   opportunities: { name: 'Opportunities', hint: 'What could help you grow?', color: '#d6e5c7', car: '#91a775', swot: true },
   threats: { name: 'Threats', hint: 'What could get in your way?', color: '#f6cbc2', car: '#c98277', swot: true },
 }
-const roadmap = ['today', 'highway', 'parking', 'shopping']
+const roadmap = ['parking', 'highway', 'today', 'shopping']
 const matrix = ['express', 'schedule', 'delegate', 'skip']
 const swot = ['strengths', 'weaknesses', 'opportunities', 'threats']
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
@@ -42,14 +42,10 @@ export function createBoard({ get, update, notify }) {
   const due = byId('task-due')
   const overview = byId('overview')
   const table = byId('task-table')
-  const tableToggle = byId('table-toggle')
   const groups = [[byId('roadmap'), roadmap], [byId('matrix'), matrix],
-    [byId('matrix-parking'), ['parking']], [byId('swot'), swot]]
+    [byId('matrix-lanes'), roadmap], [byId('swot'), swot]]
   let editing
-  let tableView = false
   let drag = null
-
-  for (const [key, lane] of Object.entries(lanes)) laneInput.add(new Option(lane.name, key))
 
   function focusCard(id, selector) {
     const matches = document.querySelectorAll(`[data-card-id="${CSS.escape(id)}"] ${selector}`)
@@ -63,6 +59,9 @@ export function createBoard({ get, update, notify }) {
     title.value = card?.title ?? ''
     notes.value = card?.notes ?? ''
     due.value = card?.due ?? ''
+    const isSwot = lanes[card?.lane ?? lane].swot
+    laneInput.replaceChildren(...Object.entries(lanes).filter(([, option]) => Boolean(option.swot) === Boolean(isSwot))
+      .map(([key, option]) => new Option(option.name, key)))
     laneInput.value = card?.lane ?? lane
     byId('task-error').textContent = ''
     byId('task-delete').hidden = !card
@@ -100,13 +99,12 @@ export function createBoard({ get, update, notify }) {
   function makeCard(card) {
     const item = create('article', '', 'task-card' + (card.done ? ' done' : ''))
     item.dataset.cardId = card.id
+    item.style.setProperty('--car', lanes[card.lane].car)
     const token = create('span', '', 'car-token')
-    token.style.setProperty('--car', lanes[card.lane].car)
     token.setAttribute('aria-hidden', 'true')
     const content = button('', 'task-content', () => edit(card), 'Edit ' + card.title)
     content.append(create('strong', card.title, 'task-title'))
     if (card.due) content.append(create('span', dateText(card.due), 'task-detail'))
-    if (card.notes) content.append(create('span', card.notes, 'task-detail task-notes'))
     item.append(token, content, actions(card))
     item.addEventListener('pointerdown', (event) => startDrag(event, card, item))
     return item
@@ -144,6 +142,8 @@ export function createBoard({ get, update, notify }) {
       return metric
     }))
     for (const [group, keys] of groups) {
+      const scroll = new Map([...group.querySelectorAll('.lane')].map((lane) =>
+        [lane.dataset.lane, lane.querySelector('.cards').scrollTop]))
       const columns = keys.map((key) => {
         const lane = lanes[key]
         const section = create('section', '', 'lane')
@@ -152,10 +152,20 @@ export function createBoard({ get, update, notify }) {
         const heading = create('header', '', 'lane-heading')
         const name = create('div')
         const headingId = group.id + '-' + key
-        const label = create('h2', lane.name)
+        const label = create('h2', lane.heading ?? lane.name)
         label.id = headingId
         section.setAttribute('aria-labelledby', headingId)
-        name.append(label, create('p', lane.hint))
+        if (lane.symbol) {
+          const symbol = create('span', lane.symbol, 'lane-symbol')
+          symbol.setAttribute('aria-hidden', 'true')
+          label.prepend(symbol)
+        }
+        name.append(label)
+        if (lane.heading) {
+          const hint = document.createElement('p')
+          hint.append(create('em', lane.name), ' · ' + lane.hint)
+          name.append(hint)
+        } else name.append(create('p', lane.hint))
         heading.append(name, button('+', '', () => edit(null, key), 'Add to ' + lane.name))
         const items = create('div', '', 'cards')
         items.append(...cards.filter((card) => card.lane === key).map(makeCard))
@@ -164,19 +174,20 @@ export function createBoard({ get, update, notify }) {
         return section
       })
       group.replaceChildren(...columns)
+      for (const column of columns) column.querySelector('.cards').scrollTop = scroll.get(column.dataset.lane) ?? 0
     }
-    if (tableView) renderTable()
+    byId('saved-swot').hidden = !cards.some(({ lane }) => lanes[lane].swot)
+    renderTable()
   }
 
   // Use a single pointer interaction for mice, pens and touch drag handles.
   function startDrag(event, card, item) {
-    if (!event.isPrimary || event.button !== 0 || drag || event.target.closest('button')) return
+    if (!event.isPrimary || event.button !== 0 || drag || event.target.closest('.task-action')) return
     if (event.pointerType === 'touch' && !event.target.closest('.car-token')) return
     drag = { card, item, pointer: event.pointerId, x: event.clientX, y: event.clientY }
-    item.setPointerCapture(event.pointerId)
-    item.addEventListener('pointermove', moveDrag)
-    item.addEventListener('pointerup', finishDrag)
-    item.addEventListener('pointercancel', cancelDrag)
+    window.addEventListener('pointermove', moveDrag)
+    window.addEventListener('pointerup', finishDrag)
+    window.addEventListener('pointercancel', cancelDrag)
     item.addEventListener('lostpointercapture', cancelDrag)
   }
 
@@ -187,12 +198,15 @@ export function createBoard({ get, update, notify }) {
     const dy = event.clientY - y
     if (!drag.ghost) {
       if (Math.hypot(dx, dy) < 6) return
+      item.setPointerCapture(event.pointerId)
       const rect = item.getBoundingClientRect()
       const ghost = item.cloneNode(true)
       ghost.classList.add('drag-ghost')
       ghost.setAttribute('aria-hidden', 'true')
       ghost.inert = true
-      ghost.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px`
+      Object.assign(ghost.style, { left: rect.left + 'px', top: rect.top + 'px',
+        width: rect.width + 'px', minHeight: rect.height + 'px' })
+      ghost.style.setProperty('--scale', getComputedStyle(item).getPropertyValue('--scale'))
       document.body.append(ghost)
       item.classList.add('is-dragging')
       drag.ghost = ghost
@@ -201,21 +215,22 @@ export function createBoard({ get, update, notify }) {
     drag.target?.removeAttribute('data-over')
     drag.before?.classList.remove('insert-before')
     drag.target = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-lane]')
+    if (drag.target && Boolean(lanes[drag.target.dataset.lane].swot) !== Boolean(lanes[drag.card.lane].swot)) drag.target = null
     drag.before = [...(drag.target?.querySelectorAll('.task-card:not(.is-dragging)') ?? [])].find((candidate) => {
       const rect = candidate.getBoundingClientRect()
-      return event.clientY < rect.top + rect.height / 2
+      return event.clientY < rect.top || (event.clientY <= rect.bottom && event.clientX < rect.left + rect.width / 2)
     })
     drag.target?.setAttribute('data-over', 'true')
     drag.before?.classList.add('insert-before')
   }
 
-  function cancelDrag() {
-    if (!drag) return
+  function cancelDrag(event) {
+    if (!drag || (event && event.pointerId !== drag.pointer)) return
     const { item, pointer, target, before, ghost } = drag
     drag = null
-    item.removeEventListener('pointermove', moveDrag)
-    item.removeEventListener('pointerup', finishDrag)
-    item.removeEventListener('pointercancel', cancelDrag)
+    window.removeEventListener('pointermove', moveDrag)
+    window.removeEventListener('pointerup', finishDrag)
+    window.removeEventListener('pointercancel', cancelDrag)
     item.removeEventListener('lostpointercapture', cancelDrag)
     if (item.hasPointerCapture(pointer)) item.releasePointerCapture(pointer)
     item.classList.remove('is-dragging')
@@ -235,10 +250,6 @@ export function createBoard({ get, update, notify }) {
     update(({ cards }) => {
       cards.splice(cards.indexOf(card), 1)
       card.lane = destination
-      if (lanes[destination].swot) {
-        card.due = ''
-        card.done = false
-      }
       const next = anchor ? cards.findIndex(({ id }) => id === anchor) : cards.length
       cards.splice(next < 0 ? cards.length : next, 0, card)
     })
@@ -279,15 +290,30 @@ export function createBoard({ get, update, notify }) {
     editor.close()
     focusCard(id, '.task-content')
   })
-  tableToggle.addEventListener('click', () => {
-    tableView = !tableView
-    tableToggle.setAttribute('aria-pressed', String(tableView))
-    tableToggle.textContent = tableView ? 'Show lanes' : 'Show task table'
-    table.hidden = !tableView
-    groups[0][0].hidden = tableView
-    byId('lane-hint').hidden = tableView
-    if (tableView) renderTable()
+  const matrixLayout = byId('matrix-layout')
+  const side = byId('matrix-side')
+  const laneToggle = byId('lanes-toggle')
+  laneToggle.addEventListener('click', () => {
+    cancelDrag()
+    side.hidden = !side.hidden
+    matrixLayout.classList.toggle('side-hidden', side.hidden)
+    laneToggle.setAttribute('aria-expanded', String(!side.hidden))
+    laneToggle.textContent = side.hidden ? 'Show side lanes' : 'Hide side lanes'
   })
+  const sizes = [65, 80, 100, 125, 150]
+  const smaller = byId('smaller-cars')
+  const larger = byId('larger-cars')
+  let sizeIndex = 2
+  function resize(step) {
+    sizeIndex = Math.max(0, Math.min(sizes.length - 1, sizeIndex + step))
+    const size = sizes[sizeIndex]
+    matrixLayout.style.setProperty('--car-scale', size / 100)
+    byId('car-size').textContent = size + '%'
+    smaller.disabled = sizeIndex === 0
+    larger.disabled = sizeIndex === sizes.length - 1
+  }
+  smaller.addEventListener('click', () => resize(-1))
+  larger.addEventListener('click', () => resize(1))
 
   return {
     render,

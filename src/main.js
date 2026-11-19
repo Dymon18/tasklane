@@ -1,19 +1,25 @@
 import './style.css'
 import { createBoard, lanes } from './board.js'
 import { createTools, defaultOptions } from './tools.js'
+import { createWhiteboard } from './whiteboard.js'
+import { frameworks } from './templates.js'
 import { createSync } from './sync.js'
 
 const byId = (id) => document.getElementById(id)
-const views = new Set(['roadmap', 'matrix', 'swot', 'whiteboard', 'decide'])
+const views = new Set(['matrix', 'roadmap', 'tasks', 'whiteboard', 'decide'])
 const demoCards = [
   { title: 'Plan this week', lane: 'today', notes: 'Pick three things to finish.' },
   { title: 'Map out a weekend road trip', lane: 'highway' },
   { title: 'Photograph a new neighbourhood', lane: 'parking' },
   { title: 'Coffee beans', lane: 'shopping' },
   { title: 'Confirm a dinner reservation', lane: 'express' },
+  { title: 'Send the signed forms before lunch', lane: 'express' },
   { title: 'Schedule a check-up', lane: 'schedule' },
+  { title: 'Make a short list of weekend hikes', lane: 'schedule' },
+  { title: 'Ask someone to pick up the parcel', lane: 'delegate' },
+  { title: 'Sort the old app downloads', lane: 'skip' },
 ]
-const empty = () => ({ cards: [], marks: [], wheel: defaultOptions })
+const empty = () => ({ cards: [], marks: [], frameworkMarks: {}, wheel: defaultOptions })
 const demo = () => ({ ...empty(), cards: demoCards.map((card, index) => ({
   id: 'demo-' + index, notes: '', due: '', done: false, ...card,
 })) })
@@ -35,13 +41,18 @@ function restore(data) {
     }))
   }
   const isPoint = (point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite)
-  if (Array.isArray(data.marks)) {
-    state.marks = data.marks.filter((mark) => mark && /^#[\da-f]{6}$/i.test(mark.color) &&
+  const cleanMarks = (marks) => !Array.isArray(marks) ? [] : marks.filter((mark) =>
+    mark && /^#[\da-f]{6}$/i.test(mark.color) &&
       Number.isFinite(mark.size) && mark.size > 0 && mark.size <= 32 && (
       (mark.kind === 'text' && isPoint(mark.point) && typeof mark.text === 'string') ||
-      (['pen', 'line'].includes(mark.kind) && Array.isArray(mark.points) && mark.points.length &&
+      (['pen', 'line', 'erase'].includes(mark.kind) && Array.isArray(mark.points) && mark.points.length &&
         mark.points.every(isPoint))
     ))
+  state.marks = cleanMarks(data.marks)
+  for (const id of Object.keys(frameworks)) {
+    if (id === 'blank') continue
+    const marks = cleanMarks(data.frameworkMarks?.[id])
+    if (marks.length) state.frameworkMarks[id] = marks
   }
   if (typeof data.wheel === 'string') state.wheel = data.wheel.slice(0, 500)
   return state
@@ -50,7 +61,8 @@ function restore(data) {
 let state = demo()
 let undo = null
 const board = createBoard({ get, update, notify })
-const tools = createTools({ get, update, notify })
+const whiteboard = createWhiteboard({ get, update, notify })
+const tools = createTools({ get, update })
 
 function changeMode(isOwner, nextState) {
   board.reset()
@@ -60,6 +72,7 @@ function changeMode(isOwner, nextState) {
   byId('mode-note').textContent = isOwner ? 'Your workspace saves to your account.' : 'Demo edits reset when you refresh or close the tab.'
   dismiss()
   board.render()
+  whiteboard.reset()
   tools.reset()
 }
 
@@ -99,14 +112,24 @@ function showView(view) {
 
 function readView() {
   const view = location.hash.slice(1)
-  showView(views.has(view) ? view : 'roadmap')
+  showView(view === 'swot' ? 'whiteboard' : views.has(view) ? view : 'matrix')
+  if (view === 'swot') whiteboard.select('swot')
 }
+
+const ribbon = byId('ribbon')
+const ribbonToggle = byId('ribbon-toggle')
+ribbonToggle.addEventListener('click', () => {
+  ribbon.hidden = !ribbon.hidden
+  byId('desk').classList.toggle('ribbon-hidden', ribbon.hidden)
+  ribbonToggle.setAttribute('aria-expanded', String(!ribbon.hidden))
+  ribbonToggle.textContent = ribbon.hidden ? 'Show ribbon' : 'Hide ribbon'
+})
 
 for (const tab of document.querySelectorAll('[data-view]')) {
   tab.addEventListener('click', () => {
     showView(tab.dataset.view)
     const url = new URL(location.href)
-    url.hash = tab.dataset.view === 'roadmap' ? '' : tab.dataset.view
+    url.hash = tab.dataset.view === 'matrix' ? '' : tab.dataset.view
     history.replaceState(history.state, '', url)
   })
 }
@@ -122,5 +145,6 @@ byId('undo-remove').addEventListener('click', () => {
 })
 
 board.render()
+whiteboard.reset()
 tools.reset()
 readView()
