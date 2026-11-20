@@ -1,17 +1,16 @@
 export const frameworks = {
   blank: 'Blank whiteboard',
-  swot: 'SWOT',
-  eisenhower: 'Eisenhower matrix',
   kanban: 'Kanban',
-  northstar: 'North Star',
+  eisenhower: 'Eisenhower matrix',
+  swot: 'SWOT',
   timeline: 'Timeline / milestones',
   gantt: 'Gantt chart',
   impact: 'Impact / effort',
-  rice: 'RICE scoring',
-  swimlane: 'Swimlane',
-  timeblock: 'Time-blocking calendar',
-  mindmap: 'Mind map',
+  'pros-cons': 'Pros and Cons',
 }
+
+// Keep saved boards for retired templates when a workspace is loaded and saved again.
+export const savedFrameworkIds = [...Object.keys(frameworks), 'northstar', 'rice', 'swimlane', 'timeblock', 'mindmap']
 
 const lineColor = '#8caaa0'
 const colors = ['#f4dbd3', '#d9ecf0', '#f4e7c6', '#dfead3', '#ebe0f1']
@@ -43,8 +42,8 @@ export function drawTemplate(canvas, id) {
     ctx.strokeRect(x, y, width, height)
     if (label) text(label, x + width / 2, y + 28)
   }
-  function grid(columns, rows, left = 44) {
-    const top = 54, right = 1156, bottom = 654
+  function grid(columns, rows) {
+    const left = 44, top = 54, right = 1156, bottom = 654
     const width = (right - left) / columns.length
     const height = (bottom - top) / rows.length
     box(left, top, right - left, bottom - top, '#ffffff7a')
@@ -92,28 +91,10 @@ export function drawTemplate(canvas, id) {
     case 'gantt':
       grid(['Task', 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'], Array(8).fill(''))
       break
-    case 'rice':
-      grid(['Initiative', 'Reach', 'Impact', 'Confidence', 'Effort', 'RICE score'], Array(7).fill(''))
-      text('Reach × Impact × Confidence ÷ Effort', 600, 27, 'center', 22)
+    case 'pros-cons':
+      box(44, 54, 548, 600, colors[3], 'Pros')
+      box(608, 54, 548, 600, colors[0], 'Cons')
       break
-    case 'swimlane':
-      grid(['Intake', 'Ready', 'In progress', 'Review', 'Done'], ['Lane 1', 'Lane 2', 'Lane 3', 'Lane 4'], 140)
-      break
-    case 'timeblock':
-      grid(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'], 105)
-      break
-    case 'northstar': {
-      box(395, 58, 410, 140, colors[1], 'North Star metric')
-      line(600, 198, 600, 286)
-      line(213, 286, 987, 286)
-      const drivers = [213, 600, 987]
-      drivers.forEach((x, i) => {
-        line(x, 286, x, 340)
-        box(x - 169, 340, 338, 274, colors[i + 2], 'Driver ' + (i + 1))
-      })
-      break
-    }
     case 'timeline': {
       line(85, 350, 1115, 350)
       const milestones = [150, 375, 600, 825, 1050]
@@ -129,20 +110,5 @@ export function drawTemplate(canvas, id) {
       })
       break
     }
-    case 'mindmap':
-      for (let i = 0; i < 6; i++) {
-        const angle = Math.PI / 3 * i
-        const x = 600 + Math.cos(angle) * 420
-        const y = 350 + Math.sin(angle) * 275
-        line(600, 350, x, y)
-        box(x - 103, y - 40, 206, 80, colors[i % colors.length], 'Branch ' + (i + 1))
-      }
-      ctx.fillStyle = '#dcece4'
-      ctx.beginPath()
-      ctx.ellipse(600, 350, 146, 72, 0, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.stroke()
-      text('Central idea', 600, 350)
-      break
   }
 }

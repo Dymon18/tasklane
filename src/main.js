@@ -3,7 +3,7 @@ import { createBoard, lanes, shoppingCategory } from './board.js'
 import { carColor, titleLimit } from './car-notes.js'
 import { createTools, defaultOptions } from './tools.js'
 import { createWhiteboard } from './whiteboard.js'
-import { frameworks } from './templates.js'
+import { savedFrameworkIds } from './templates.js'
 import { createSync } from './sync.js'
 
 const byId = (id) => document.getElementById(id)
@@ -59,7 +59,7 @@ function restoreSpace(data) {
         mark.points.every(isPoint))
     ))
   state.marks = cleanMarks(data.marks)
-  for (const id of Object.keys(frameworks)) {
+  for (const id of savedFrameworkIds) {
     if (id !== 'blank') {
       const marks = cleanMarks(data.frameworkMarks?.[id])
       if (marks.length) state.frameworkMarks[id] = marks
